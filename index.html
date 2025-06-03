@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant Chain Review Analyzer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Restaurant Chain Review Analyzer</h1>
+    <form class="form" id="analyzerForm">
+      <label for="chainName">Enter a Regional Restaurant Chain Name:</label>
+      <input type="text" id="chainName" placeholder="e.g., Cafe Patachou, Bojangles" autofocus spellcheck="false">
+      <button type="submit">Analyze Reviews</button>
+    </form>
+    <p class="error" id="error"></p>
+    <div class="result" id="result"></div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
