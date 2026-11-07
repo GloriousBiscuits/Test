@@ -3,7 +3,7 @@
 
 - outlook_send_mail is allowed only when every to/cc/bcc address is Brian.
 - Tools that send or forward to arbitrary recipients are blocked outright.
-- Drafts are allowed. They sit in Outlook Drafts until Brian sends them himself.
+- Drafts are allowed, without Bcc. They sit in Outlook Drafts until Brian sends them himself.
 
 Exit code 2 blocks the tool call and shows stderr to the model.
 """
@@ -40,6 +40,9 @@ args = event.get("tool_input") or {}
 
 if action in BLOCKED:
     block(BLOCKED[action])
+
+if action in ("outlook_update_draft", "outlook_create_draft") and args.get("bcc"):
+    block("Bcc on drafts is blocked. Put recipients on To or Cc where Brian can see them.")
 
 if action == "outlook_send_mail":
     recipients = [
