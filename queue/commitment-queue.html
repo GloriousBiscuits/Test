@@ -1,0 +1,430 @@
+<title>Commitment Queue</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: one review column, filter tabs on top, a sticky action bar at the bottom. */
+:root {
+  /* Hargett Hunter certified palette: plum structure, warm neutrals, copper accent kept small. */
+  --bg: #FBF9F5;          /* ivory */
+  --surface: #FFFFFF;     /* white */
+  --ink: #353034;         /* gray-800 */
+  --muted: #665E63;       /* gray-600 */
+  --line: #E5E0DF;        /* gray-200 */
+  --accent: #543156;      /* plum-700 */
+  --accent-ink: #FFFFFF;
+  --accent-soft: #EFE4EF; /* plum-100 */
+  --heading: #301A32;     /* plum-900 */
+  --warn: #7A4C2F;        /* copper-700 */
+  --warn-soft: #EFE4EF;   /* plum-100 */
+  --bad: #7A4C2F;         /* copper-700 */
+  --bad-soft: #E7CFB9;    /* copper-200, badges only */
+  --focus: #C5966F;       /* copper-400 */
+  --font-body: "Segoe UI", "Source Sans 3", Calibri, Arial, Helvetica, sans-serif;
+  --radius: 2px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1B0E1D; --surface: #221124; --ink: #F4EFE6; --muted: #C9BFCB; --line: #422544;
+    --accent: #C5A5C6; --accent-ink: #1B0E1D; --accent-soft: #422544; --heading: #F4EFE6;
+    --warn: #D7B192; --warn-soft: #301A32; --bad: #D7B192; --bad-soft: #422544; --focus: #C5966F;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1B0E1D; --surface: #221124; --ink: #F4EFE6; --muted: #C9BFCB; --line: #422544;
+  --accent: #C5A5C6; --accent-ink: #1B0E1D; --accent-soft: #422544; --heading: #F4EFE6;
+  --warn: #D7B192; --warn-soft: #301A32; --bad: #D7B192; --bad-soft: #422544; --focus: #C5966F;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 120px; }
+header { display: grid; gap: 4px; margin-bottom: 20px; }
+h1 { color: var(--heading); font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 0.875rem; margin: 0; }
+.banner { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 10px 12px; font-size: 0.875rem; margin-bottom: 16px; }
+.banner.warn { background: var(--warn-soft); border-color: transparent; color: var(--ink); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+.tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); font: inherit; font-weight: 500; padding: 8px 10px; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .n { font-family: var(--font-body); font-size: 0.8125rem; margin-left: 4px; color: var(--muted); }
+.list { display: grid; gap: 10px; }
+.item { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 14px 12px 10px; }
+.item.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.item.ghost { opacity: 0.7; }
+.check { display: flex; justify-content: center; padding-top: 2px; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.body { display: grid; gap: 6px; min-width: 0; }
+.eyebrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.75rem; color: var(--muted); }
+.kind { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 0.6875rem; padding: 2px 6px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent); }
+.kind.ask { background: var(--warn-soft); color: var(--warn); }
+.title { font: inherit; font-size: 1rem; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: var(--radius); padding: 3px 6px; margin-left: -7px; width: calc(100% + 7px); }
+.title:hover { border-color: var(--line); }
+.title:focus { outline: none; border-color: var(--accent); background: var(--bg); }
+.title-static { font-weight: 600; overflow-wrap: anywhere; }
+.summary { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.field { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--muted); }
+.field select, .field input { font: inherit; font-size: 0.8125rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 6px; max-width: 100%; }
+.field input[type="date"] { font-variant-numeric: tabular-nums; }
+.due { font-family: var(--font-body); font-size: 0.75rem; padding: 2px 6px; border-radius: var(--radius); background: var(--bg); color: var(--muted); font-variant-numeric: tabular-nums; }
+.due.soon { background: var(--warn-soft); color: var(--warn); }
+.due.late { background: var(--bad-soft); color: var(--bad); }
+.links { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8125rem; }
+a { color: var(--accent); text-underline-offset: 2px; }
+.status { font-size: 0.8125rem; border-radius: var(--radius); padding: 6px 8px; background: var(--bg); color: var(--muted); }
+.status.bad { background: var(--bad-soft); color: var(--bad); }
+.status.warn { background: var(--warn-soft); color: var(--warn); }
+.status.good { background: var(--accent-soft); color: var(--accent); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.row .meta { font-size: 0.8125rem; color: var(--muted); }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 14px; }
+.empty p { margin: 0; color: var(--muted); }
+.empty strong { color: var(--ink); }
+.example-label { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.btn { font: inherit; font-weight: 500; font-size: 0.875rem; border-radius: var(--radius); padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn:focus-visible, .tab:focus-visible, .check input:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
+.bar-inner { max-width: 760px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bar .count { font-size: 0.875rem; color: var(--muted); margin-right: auto; font-variant-numeric: tabular-nums; }
+.linkbtn { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-size: 0.875rem; }
+@media (prefers-reduced-motion: no-preference) { .item { transition: border-color 120ms ease, box-shadow 120ms ease; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Commitment Queue</h1>
+    <p class="sub" id="sub">Connecting…</p>
+  </header>
+  <div id="banner"></div>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <main class="list" id="list"></main>
+</div>
+<div class="bar" id="bar" hidden>
+  <div class="bar-inner">
+    <span class="count" id="count">0 selected</span>
+    <button class="linkbtn" id="selall" type="button">Select all</button>
+    <button class="btn" id="dismiss" type="button" disabled>Dismiss</button>
+    <button class="btn primary" id="add" type="button" disabled>Add to Notion</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const DS_ID = "81c5ef6c-ab99-4db6-a754-2558512184a2";
+  const COMPANIES = ["WSH", "Bacari", "Live.Eat.Surf", "TRIS", "Cajun Steamer", "Crooked Hammock", "Stacked", "Trudy's", "Big Table Restaurants", "Marugame Udon", "Original ChopShop", "Cherry Bounce", "HH - Internal", "HH - External"];
+  const PRIORITIES = ["1 - High", "2 - Mid High", "3 - Medium", "4 - Mid Low", "5 - Low"];
+  const REVIEW = ["pending", "adding", "approved", "check"];
+  const CONNECTOR_CODES = ["approval_required", "needs_reauth", "server_not_connected", "selection_required", "not_in_manifest", "blocked_by_policy", "not_granted", "capability_disabled", "capability_removed", "server_not_found", "consent_required"];
+
+  const S = { items: [], meta: null, tab: "review", selected: new Set(), edits: new Map(), busy: false, loaded: false, dbError: null, slow: false, banner: null };
+  let db = null, mcp = null;
+
+  // ---------- helpers ----------
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : String(v));
+    }
+    for (const kid of kids.flat()) {
+      if (kid == null || kid === false) continue;
+      el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  }
+  function safeUrl(u) { try { const x = new URL(u); return x.protocol === "https:" ? x.href : null; } catch (e) { return null; } }
+  function nowIso() { return new Date().toISOString(); }
+  function str(v) { return typeof v === "string" ? v : ""; }
+  function parseDay(s) { if (!/^\d{4}-\d{2}-\d{2}$/.test(str(s))) return null; const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+  function today() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+  function fmtDay(s) { const d = parseDay(s); return d ? d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : ""; }
+  function fmtStamp(s) { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+  function businessDaysUntil(s) {
+    const d = parseDay(s); if (!d) return null;
+    const t = today(); const sign = d >= t ? 1 : -1; let n = 0; const cur = new Date(t);
+    while ((sign > 0 && cur < d) || (sign < 0 && cur > d)) { cur.setDate(cur.getDate() + sign); const w = cur.getDay(); if (w !== 0 && w !== 6) n += sign; }
+    return n;
+  }
+  function dueBadge(s) {
+    const n = businessDaysUntil(s); if (n == null) return null;
+    let label, cls = "due";
+    if (n < 0) { label = (-n) + (n === -1 ? " day late" : " days late"); cls += " late"; }
+    else if (n === 0) { label = "due today"; cls += " soon"; }
+    else if (n === 1) { label = "due next business day"; cls += " soon"; }
+    else { label = "in " + n + " business days"; if (n <= 3) cls += " soon"; }
+    return h("span", { class: cls, text: label });
+  }
+  function urgencyFor(due) { const n = businessDaysUntil(due); return n == null ? null : (n <= 2 ? "Urgent" : "Not Urgent"); }
+  function eff(item) { return Object.assign({}, item, S.edits.get(item.id) || {}); }
+  function byId(id) { return S.items.find(i => i.id === id); }
+  function reviewItems() {
+    return S.items.filter(i => REVIEW.includes(i.status)).sort((a, b) => {
+      const da = str(eff(a).due) || "9999", dbb = str(eff(b).due) || "9999";
+      return da < dbb ? -1 : da > dbb ? 1 : str(a.proposed_at) < str(b.proposed_at) ? -1 : 1;
+    });
+  }
+  function addedItems() { return S.items.filter(i => i.status === "added").sort((a, b) => str(b.added_at) < str(a.added_at) ? -1 : 1); }
+  function dismissedItems() { return S.items.filter(i => i.status === "dismissed" || i.status === "expired").sort((a, b) => str(b.decided_at) < str(a.decided_at) ? -1 : 1); }
+  function selectable(i) { return i.status === "pending" || i.status === "check"; }
+
+  // ---------- render ----------
+  function render() {
+    renderSub(); renderBanner(); renderTabs(); renderList(); renderBar();
+  }
+  function renderSub() {
+    const sub = document.getElementById("sub");
+    if (!S.loaded) { sub.textContent = S.slow ? "Still connecting. The queue can't be reached yet." : "Connecting…"; return; }
+    const n = reviewItems().length;
+    const last = S.meta && S.meta.last_run ? "Last scan " + fmtStamp(S.meta.last_run) : "No scan yet";
+    sub.textContent = last + " · " + n + (n === 1 ? " item to review" : " items to review");
+  }
+  function renderBanner() {
+    const el = document.getElementById("banner"); el.replaceChildren();
+    if (S.dbError) { el.append(h("div", { class: "banner warn", text: S.dbError })); return; }
+    if (S.banner) el.append(h("div", { class: "banner " + (S.banner.kind || ""), text: S.banner.text }));
+  }
+  function renderTabs() {
+    const tabs = [["review", "To review", reviewItems().length], ["added", "Added", addedItems().length], ["dismissed", "Dismissed", dismissedItems().length]];
+    const el = document.getElementById("tabs"); el.replaceChildren();
+    for (const [key, label, n] of tabs) {
+      el.append(h("button", { class: "tab", role: "tab", type: "button", "aria-selected": S.tab === key ? "true" : "false", id: "tab-" + key, onclick: () => { S.tab = key; render(); } }, label, h("span", { class: "n", text: n })));
+    }
+  }
+  function renderList() {
+    const el = document.getElementById("list"); el.replaceChildren();
+    if (!S.loaded) return;
+    if (S.tab === "review") {
+      const items = reviewItems();
+      if (!items.length) { el.append(emptyState()); return; }
+      items.forEach(i => el.append(card(i)));
+    } else if (S.tab === "added") {
+      const items = addedItems();
+      if (!items.length) { el.append(h("div", { class: "empty" }, h("p", { text: "Nothing added yet. Tasks you add from To review show up here with a link to Notion." }))); return; }
+      items.forEach(i => el.append(addedRow(i)));
+    } else {
+      const items = dismissedItems();
+      if (!items.length) { el.append(h("div", { class: "empty" }, h("p", { text: "Nothing dismissed. Items you skip land here, and you can restore them." }))); return; }
+      items.forEach(i => el.append(dismissedRow(i)));
+    }
+  }
+  function emptyState() {
+    return h("div", { class: "empty" },
+      h("p", {}, h("strong", { text: "Nothing to review. " }), "Each weekday at 6:47am ET the agent scans your email and lists the promises you made and the asks made of you here. Tick the ones you want and add them to the Tasks Table."),
+      h("div", { class: "example-label", text: "Example of an item (not real)" }),
+      card({ id: "example", type: "task", kind: "promise", counterpart: "Roark Capital", email_date: "", title: "Send Roark revised indemnity language", company: "TRIS", due: "", priority: "3 - Medium", summary: "You told the Roark team you'd send revised language by Thursday.", status: "pending" }, true)
+    );
+  }
+  function card(item, ghost) {
+    const it = ghost ? item : eff(item);
+    const id = item.id;
+    const sel = S.selected.has(id);
+    const canSel = !ghost && selectable(item) && !S.busy;
+    const isTask = it.type !== "note";
+    const kindLabel = it.kind === "ask" ? "Asked of you" : "You promised";
+    const eyebrow = h("div", { class: "eyebrow" }, h("span", { class: "kind" + (it.kind === "ask" ? " ask" : ""), text: isTask ? kindLabel : "Update on a task" }), str(it.counterpart) ? h("span", { text: str(it.counterpart) }) : null, str(it.email_date) ? h("span", { text: "· " + fmtDay(it.email_date) }) : null);
+    let titleEl;
+    if (isTask) {
+      titleEl = h("input", { class: "title", id: "title-" + id, type: "text", value: str(it.title), "aria-label": "Task name", disabled: ghost || !selectable(item) || S.busy });
+      titleEl.addEventListener("input", e => { setEdit(id, { title: e.target.value }); });
+    } else {
+      const t = safeUrl(it.target_url);
+      titleEl = h("div", { class: "title-static" }, "Add a note to ", t ? h("a", { href: t, target: "_blank", rel: "noopener", text: str(it.target_title) || "the task" }) : str(it.target_title));
+    }
+    const fields = isTask ? h("div", { class: "fields" },
+      h("label", { class: "field" }, "Company", selectEl("company-" + id, ["", ...COMPANIES], str(it.company), v => setEdit(id, { company: v || null }), ghost || !selectable(item) || S.busy, "None")),
+      h("label", { class: "field" }, "Due", (() => { const inp = h("input", { type: "date", id: "due-" + id, value: str(it.due), disabled: ghost || !selectable(item) || S.busy }); inp.addEventListener("change", e => { setEdit(id, { due: e.target.value || null }); render(); }); return inp; })()),
+      h("label", { class: "field" }, "Priority", selectEl("prio-" + id, PRIORITIES, str(it.priority) || "3 - Medium", v => setEdit(id, { priority: v }), ghost || !selectable(item) || S.busy)),
+      str(it.due) ? dueBadge(it.due) : null
+    ) : null;
+    const email = safeUrl(it.email_url), draft = safeUrl(it.draft_url);
+    const links = (email || draft) ? h("div", { class: "links" }, email ? h("a", { href: email, target: "_blank", rel: "noopener", text: "Open email" }) : null, draft ? h("a", { href: draft, target: "_blank", rel: "noopener", text: "Open draft reply" }) : null) : null;
+    const box = h("input", { type: "checkbox", id: "sel-" + id, "aria-label": "Select " + (str(it.title) || "item"), checked: sel, disabled: !canSel });
+    box.addEventListener("change", e => { if (e.target.checked) S.selected.add(id); else S.selected.delete(id); render(); });
+    return h("article", { class: "item" + (sel ? " selected" : "") + (ghost ? " ghost" : "") },
+      h("div", { class: "check" }, box),
+      h("div", { class: "body" }, eyebrow, titleEl, str(it.summary) ? h("p", { class: "summary", text: str(it.summary) }) : null, fields, links, statusLine(item))
+    );
+  }
+  function selectEl(id, opts, value, onChange, disabled, blankLabel) {
+    const s = h("select", { id, disabled });
+    for (const o of opts) s.append(h("option", { value: o, text: o || blankLabel || "None", selected: o === value }));
+    if (value && !opts.includes(value)) s.append(h("option", { value, text: value, selected: true }));
+    s.addEventListener("change", e => onChange(e.target.value));
+    return s;
+  }
+  function statusLine(item) {
+    const err = str(item.error);
+    if (item.status === "adding") return h("div", { class: "status", text: "Adding to Notion…" });
+    if (item.status === "approved") return h("div", { class: "status good", text: (err ? err + " " : "") + "Approved. The agent adds it on its next run." });
+    if (item.status === "check") return h("div", { class: "status warn", text: (err || "This may already be in Notion.") + " The agent checks Notion on its next run and adds it only if it's missing." });
+    return null;
+  }
+  function addedRow(item) {
+    const u = safeUrl(item.notion_url);
+    const title = item.type === "note" ? "Note on " + (str(item.target_title) || "a task") : str(item.title);
+    return h("div", { class: "row" },
+      h("div", { style: "min-width:0" }, h("div", { class: "title-static", text: title }), h("div", { class: "meta", text: [str(item.company), item.added_at ? "Added " + fmtStamp(item.added_at) : "", item.added_by === "agent" ? "by the agent" : ""].filter(Boolean).join(" · ") })),
+      u ? h("a", { href: u, target: "_blank", rel: "noopener", text: "Open in Notion" }) : h("span", { class: "meta", text: "In Notion" })
+    );
+  }
+  function dismissedRow(item) {
+    const title = item.type === "note" ? "Note on " + (str(item.target_title) || "a task") : str(item.title);
+    const btn = h("button", { class: "btn", type: "button", id: "restore-" + item.id, text: "Restore", disabled: S.busy });
+    btn.addEventListener("click", () => write(item.id, { status: "pending", decided_at: null, error: null }));
+    return h("div", { class: "row" },
+      h("div", { style: "min-width:0" }, h("div", { class: "title-static", text: title }), h("div", { class: "meta", text: (item.status === "expired" ? "Expired, not reviewed in 10 business days" : "Dismissed") + (item.decided_at ? " · " + fmtStamp(item.decided_at) : "") })),
+      btn
+    );
+  }
+  function renderBar() {
+    const bar = document.getElementById("bar");
+    const show = S.loaded && S.tab === "review" && reviewItems().some(selectable);
+    bar.hidden = !show;
+    if (!show) return;
+    const n = S.selected.size;
+    document.getElementById("count").textContent = S.busy ? "Working…" : n + " selected";
+    document.getElementById("add").disabled = !n || S.busy;
+    document.getElementById("dismiss").disabled = !n || S.busy;
+    document.getElementById("add").textContent = mcp ? "Add to Notion" : "Approve";
+    const all = reviewItems().filter(selectable);
+    document.getElementById("selall").textContent = all.length && all.every(i => S.selected.has(i.id)) ? "Clear" : "Select all";
+    document.getElementById("selall").disabled = S.busy;
+  }
+  function setEdit(id, patch) { S.edits.set(id, Object.assign({}, S.edits.get(id) || {}, patch)); }
+
+  // ---------- writes ----------
+  async function write(id, patch) {
+    if (!db) return;
+    try { await db.doc("items/" + id).update(patch); }
+    catch (e) { S.banner = { kind: "warn", text: "Couldn't save that change (" + (e && e.code || "error") + "). Try again in a moment." }; render(); throw e; }
+  }
+  function taskFields(it) { return { title: str(it.title).trim() || str(byId(it.id).title), company: it.company || null, due: it.due || null, priority: it.priority || "3 - Medium", urgency: urgencyFor(it.due) }; }
+  function bodyMarkdown(it) {
+    const lines = [];
+    if (str(it.summary)) lines.push(str(it.summary));
+    const email = safeUrl(it.email_url), draft = safeUrl(it.draft_url);
+    const subj = str(it.email_subject).replace(/[\[\]]/g, "");
+    if (email) lines.push("[" + (subj || "Open email") + "](" + email + ")" + (str(it.email_date) ? " · " + str(it.email_date) : ""));
+    if (draft) lines.push("[Draft reply](" + draft + ")");
+    return lines.join("\n\n");
+  }
+  function createInput(it) {
+    const p = { "Task Name": it.title, "Progress": "Not started", "Priority": it.priority };
+    if (it.urgency) p["Urgency"] = it.urgency;
+    if (it.company) p["Company"] = JSON.stringify([it.company]);
+    const lead = S.meta && str(S.meta.notion_user_id);
+    if (lead) p["Task Lead(s)"] = [lead];
+    if (it.due) { p["date:Timeline:start"] = it.due; p["date:Timeline:is_datetime"] = 0; }
+    return { parent: { data_source_id: DS_ID }, pages: [{ properties: p, content: bodyMarkdown(it) }] };
+  }
+  function findNotionUrl(res) {
+    let s = ""; try { s = JSON.stringify(res && (res.payload !== undefined ? res.payload : res.content)); } catch (e) { return null; }
+    const m = s && s.match(/https:\/\/(?:www\.|app\.)?notion\.(?:so|com)\/[^\s"'\\)\]]+/);
+    return m ? m[0] : null;
+  }
+  function connectorCopy(code) {
+    switch (code) {
+      case "approval_required": case "consent_required": return "This page needs your OK to use Notion. Allow it when claude.ai asks, then add again.";
+      case "needs_reauth": return "Your Notion connection expired. Reconnect Notion in claude.ai Settings, Connectors.";
+      case "server_not_connected": case "server_not_found": return "Notion isn't connected for your account. Add it in claude.ai Settings, Connectors.";
+      case "selection_required": return "You have more than one Notion connector. Pick one when claude.ai asks.";
+      case "not_in_manifest": return "Notion access is turned off for this page. Turn it back on from the page's Permissions menu.";
+      case "blocked_by_policy": return "Your organization blocks this Notion action for this page.";
+      default: return "Notion isn't available from this page right now.";
+    }
+  }
+
+  async function addOne(id) {
+    const base = byId(id); if (!base || !selectable(base)) return "ok";
+    const it = Object.assign({}, eff(base), base.type === "note" ? {} : taskFields(eff(base)));
+    const fields = base.type === "note" ? {} : taskFields(eff(base));
+    if (!mcp) { await write(id, Object.assign({}, fields, { status: "approved", decided_at: nowIso(), error: null })); S.edits.delete(id); return "ok"; }
+    await write(id, Object.assign({}, fields, { status: "adding", decided_at: nowIso(), error: null }));
+    try {
+      let res, url;
+      if (base.type === "note") {
+        const target = safeUrl(base.target_url);
+        const note = str(base.summary) + (safeUrl(base.email_url) ? " [Open email](" + safeUrl(base.email_url) + ")" : "");
+        res = await mcp.callTool("Notion", "notion-create-comment", { page_id: target, markdown: note });
+        url = target;
+      } else {
+        res = await mcp.callTool("Notion", "notion-create-pages", createInput(it));
+        url = findNotionUrl(res);
+      }
+      await write(id, { status: "added", notion_url: url || null, added_at: nowIso(), added_by: "page" });
+      S.edits.delete(id);
+      return "ok";
+    } catch (e) {
+      const code = e && e.code;
+      if (CONNECTOR_CODES.includes(code)) {
+        await write(id, { status: "approved", error: null });
+        S.banner = { kind: "warn", text: connectorCopy(code) + " What you approved stays approved, and the agent adds it on its next run." };
+        return "stop";
+      }
+      if (code === "tool_error") {
+        await write(id, { status: "approved", error: "Notion refused the direct add." });
+        return "ok";
+      }
+      await write(id, { status: "check", error: "Notion didn't confirm the add." });
+      return "ok";
+    }
+  }
+  async function addSelected() {
+    const ids = reviewItems().filter(i => S.selected.has(i.id) && selectable(i)).map(i => i.id);
+    if (!ids.length) return;
+    S.busy = true; S.banner = null; render();
+    let added = 0;
+    for (const id of ids) {
+      let r; try { r = await addOne(id); } catch (e) { r = "stop"; }
+      S.selected.delete(id);
+      if (r === "ok") added++;
+      if (r === "stop") break;
+    }
+    S.busy = false;
+    if (!S.banner && added) S.banner = { kind: "", text: mcp ? "Done. Check the Added tab for Notion links." : "Approved. The agent adds them on its next run." };
+    render();
+  }
+  async function dismissSelected() {
+    const ids = reviewItems().filter(i => S.selected.has(i.id) && selectable(i)).map(i => i.id);
+    if (!ids.length) return;
+    S.busy = true; render();
+    for (const id of ids) { try { await write(id, { status: "dismissed", decided_at: nowIso() }); S.selected.delete(id); } catch (e) { break; } }
+    S.busy = false; render();
+  }
+
+  document.getElementById("add").addEventListener("click", addSelected);
+  document.getElementById("dismiss").addEventListener("click", dismissSelected);
+  document.getElementById("selall").addEventListener("click", () => {
+    const all = reviewItems().filter(selectable);
+    if (all.every(i => S.selected.has(i.id))) S.selected.clear(); else all.forEach(i => S.selected.add(i.id));
+    render();
+  });
+
+  // ---------- boot ----------
+  render();
+  const slowTimer = setTimeout(() => { if (!S.loaded) { S.slow = true; render(); } }, 10000);
+  const cl = window.claude;
+  if (!cl || typeof cl.use !== "function") { S.dbError = "Open this page on claude.ai to see your queue."; S.loaded = true; clearTimeout(slowTimer); render(); return; }
+  cl.use("mcp").then(m => { mcp = m; render(); }).catch(() => { mcp = null; });
+  cl.use("db").then(d => {
+    db = d;
+    if (!db) { S.dbError = "The queue isn't available in this view. Open it on claude.ai while signed in."; S.loaded = true; clearTimeout(slowTimer); render(); return; }
+    db.collection("items").onSnapshot(snap => {
+      S.items = snap.docs.map(doc => Object.assign({ id: doc.id }, doc.data()));
+      for (const id of [...S.selected]) { const i = byId(id); if (!i || !selectable(i)) S.selected.delete(id); }
+      if (!snap.metadata.fromCache) { S.loaded = true; S.slow = false; clearTimeout(slowTimer); }
+      else if (snap.size) { S.loaded = true; }
+      render();
+    }, err => { S.dbError = "The queue stopped updating (" + (err && err.code || "error") + "). Reload the page."; S.loaded = true; clearTimeout(slowTimer); render(); });
+    db.doc("meta/agent").onSnapshot(snap => { S.meta = snap.exists ? snap.data() : null; render(); }, () => {});
+  });
+})();
+</script>
