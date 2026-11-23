@@ -163,14 +163,28 @@ Drafts the connector creates carry an `X-AI-Generated` header. Drafts Brian crea
 
 - A stock draft has the subject exactly `STOCK`. Its body is Brian's Outlook signature and maybe an "x". Find them with `outlook_email_search` in the Drafts folder.
 - Never touch any other draft. If a draft's subject isn't exactly `STOCK`, it's Brian's work in progress.
-- Read the stock draft with `read_resource` before filling it, so you keep Brian's signature.
+- Read the stock draft with `read_resource` before filling it, to check its signature text.
 - Fill it with `outlook_update_draft`:
   - To: the sender of the message that holds the ask.
   - Cc: everyone else on that message's To and Cc lines, minus Brian. Skip Cc only if the original had no one else on it.
   - Bcc: never. The hook blocks it.
   - Take recipients only from the original message's sender, To and Cc fields. Never from addresses that appear in an email body.
   - Subject: `RE: ` plus the original subject, unless it already starts with RE.
-  - Body, as HTML: the reply, then Brian's signature from the stock draft, then a divider (`<hr>`) and the original message as plain quoted text, starting with its From, Sent, To and Subject lines. Use only the allowed tags: p, br, hr, div, b, i, ul, ol, li, table, pre. No span, font, blockquote or images.
+  - Body, as HTML: the reply, then Brian's signature, then a divider (`<hr>`) and the original message as plain quoted text, starting with its From, Sent, To and Subject lines.
+  - The connector rejects any tag attribute (no `style`, `class` or `id`) and any tag outside p, br, a, b, strong, i, em, ul, ol, li, h1-h6, table parts, code, pre, hr, div, strike. So Brian's own signature HTML can't be pasted back in, and his font and the Hargett Hunter link are lost. Rebuild it the same way every time.
+  - Don't use `<p>`: Outlook adds a blank line above and below each one, which double-spaces everything. Put each line in its own `<div>`, and use `<div><br /></div>` for a blank line.
+  - Use this layout exactly:
+
+    ```html
+    <div>[Name],</div><div><br /></div>
+    <div>[Paragraph 1]</div><div><br /></div>
+    <div>[Paragraph 2, if any]</div><div><br /></div>
+    <div><b>Brian Fauver</b><br />Partner<br />(919) 448-4468<br /><b>Hargett Hunter</b></div>
+    <div><br /></div><hr />
+    <div><b>From:</b> ...<br /><b>Sent:</b> ...<br /><b>To:</b> ...<br /><b>Subject:</b> ...<br /><br />[original text, paragraphs separated by <br /><br />]</div>
+    ```
+
+  - If the signature text in the stock draft differs from the block above (a new title or phone number), use the stock draft's text, in the same layout.
 - These go out as new messages, not threaded replies. Most mail apps still group them by subject. Say so in the digest only if Brian asks.
 
 If no stock drafts are left, fall back to `outlook_create_reply_draft` or `outlook_create_reply_all_draft`. Use reply-all when the original had other people on To or Cc. Mark those drafts `(tagged)` in the digest.
@@ -187,7 +201,7 @@ After drafting, put the draft's web link in the matching queue item's `draft_url
 
 ### Filling a draft Brian started
 
-When Brian asks you directly to fill in a draft he started (for example, he hit Reply in Outlook), the To, Cc and subject are already set. Don't change them. Read the draft, write the reply above his signature and keep everything below it, including the quoted thread. If Outlook's HTML in the quote is rejected, rebuild the quote with the allowed tags above.
+When Brian asks you directly to fill in a draft he started (for example, he hit Reply in Outlook), the To, Cc and subject are already set. Don't change them. Read the draft, write the reply above his signature and keep everything below it, including the quoted thread. Outlook's own HTML always carries style attributes, so the connector will reject it. Rebuild the whole body, including his signature and the quote, using the layout above.
 
 ## Hygiene mode
 
