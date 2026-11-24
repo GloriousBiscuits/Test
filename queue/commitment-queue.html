@@ -92,6 +92,12 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .bar-inner { max-width: 760px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .bar .count { font-size: 0.875rem; color: var(--muted); margin-right: auto; font-variant-numeric: tabular-nums; }
 .linkbtn { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-size: 0.875rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: 0.8125rem; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--radius); padding: 3px 8px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.chip:disabled { opacity: 0.45; cursor: default; }
+.chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.reason { margin: 0; color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: no-preference) { .item { transition: border-color 120ms ease, box-shadow 120ms ease; } }
 </style>
 
@@ -165,12 +171,39 @@ a { color: var(--accent); text-underline-offset: 2px; }
   function urgencyFor(due) { const n = businessDaysUntil(due); return n == null ? null : (n <= 2 ? "Urgent" : "Not Urgent"); }
   function eff(item) { return Object.assign({}, item, S.edits.get(item.id) || {}); }
   function byId(id) { return S.items.find(i => i.id === id); }
+  function isUpdate(i) { return i.type === "update"; }
+  function sortKey(i) { return isUpdate(i) ? str(i.current_due) : str(eff(i).due); }
   function reviewItems() {
-    return S.items.filter(i => REVIEW.includes(i.status)).sort((a, b) => {
-      const da = str(eff(a).due) || "9999", dbb = str(eff(b).due) || "9999";
+    return S.items.filter(i => REVIEW.includes(i.status) && !isUpdate(i)).sort((a, b) => {
+      const da = sortKey(a) || "9999", dbb = sortKey(b) || "9999";
       return da < dbb ? -1 : da > dbb ? 1 : str(a.proposed_at) < str(b.proposed_at) ? -1 : 1;
     });
   }
+  function dateItems() {
+    const rank = { done: 0, moved: 1, active: 2, quiet: 3 };
+    return S.items.filter(i => REVIEW.includes(i.status) && isUpdate(i)).sort((a, b) => {
+      const ra = rank[str(a.signal)] ?? 4, rb = rank[str(b.signal)] ?? 4;
+      if (ra !== rb) return ra - rb;
+      const da = sortKey(a) || "9999", dbb = sortKey(b) || "9999";
+      return da < dbb ? -1 : da > dbb ? 1 : 0;
+    });
+  }
+  function tabItems() { return S.tab === "dates" ? dateItems() : S.tab === "review" ? reviewItems() : []; }
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function weekday(d) { const x = new Date(d); while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() + 1); return x; }
+  function addBiz(n) { const x = today(); let k = 0; while (k < n) { x.setDate(x.getDate() + 1); if (x.getDay() !== 0 && x.getDay() !== 6) k++; } return x; }
+  function nextDow(dow) { const x = today(); do { x.setDate(x.getDate() + 1); } while (x.getDay() !== dow); return x; }
+  function plusDays(n) { const x = today(); x.setDate(x.getDate() + n); return weekday(x); }
+  function monthEnd() {
+    const t = today(); let x = new Date(t.getFullYear(), t.getMonth() + 1, 0);
+    while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() - 1);
+    if (x <= t) { x = new Date(t.getFullYear(), t.getMonth() + 2, 0); while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() - 1); }
+    return x;
+  }
+  function quickDates() {
+    return [["In 2 days", iso(addBiz(2))], ["Friday", iso(nextDow(5))], ["Next Mon", iso(nextDow(1))], ["+1 week", iso(plusDays(7))], ["+2 weeks", iso(plusDays(14))], ["Month end", iso(monthEnd())]];
+  }
+  const ACTIONS = [["move", "Move date"], ["done", "Mark done"], ["archive", "Archive"]];
   function addedItems() { return S.items.filter(i => i.status === "added").sort((a, b) => str(b.added_at) < str(a.added_at) ? -1 : 1); }
   function dismissedItems() { return S.items.filter(i => i.status === "dismissed" || i.status === "expired").sort((a, b) => str(b.decided_at) < str(a.decided_at) ? -1 : 1); }
   function selectable(i) { return i.status === "pending" || i.status === "check"; }
@@ -182,9 +215,9 @@ a { color: var(--accent); text-underline-offset: 2px; }
   function renderSub() {
     const sub = document.getElementById("sub");
     if (!S.loaded) { sub.textContent = S.slow ? "Still connecting. The queue can't be reached yet." : "Connecting…"; return; }
-    const n = reviewItems().length;
+    const n = reviewItems().length, nd = dateItems().length;
     const last = S.meta && S.meta.last_run ? "Last scan " + fmtStamp(S.meta.last_run) : "No scan yet";
-    sub.textContent = last + " · " + n + (n === 1 ? " item to review" : " items to review");
+    sub.textContent = last + " · " + n + (n === 1 ? " new item" : " new items") + " · " + nd + (nd === 1 ? " date to check" : " dates to check");
   }
   function renderBanner() {
     const el = document.getElementById("banner"); el.replaceChildren();
@@ -192,7 +225,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
     if (S.banner) el.append(h("div", { class: "banner " + (S.banner.kind || ""), text: S.banner.text }));
   }
   function renderTabs() {
-    const tabs = [["review", "To review", reviewItems().length], ["added", "Added", addedItems().length], ["dismissed", "Dismissed", dismissedItems().length]];
+    const tabs = [["review", "New", reviewItems().length], ["dates", "Dates", dateItems().length], ["added", "Done", addedItems().length], ["dismissed", "Skipped", dismissedItems().length]];
     const el = document.getElementById("tabs"); el.replaceChildren();
     for (const [key, label, n] of tabs) {
       el.append(h("button", { class: "tab", role: "tab", type: "button", "aria-selected": S.tab === key ? "true" : "false", id: "tab-" + key, onclick: () => { S.tab = key; render(); } }, label, h("span", { class: "n", text: n })));
@@ -205,9 +238,13 @@ a { color: var(--accent); text-underline-offset: 2px; }
       const items = reviewItems();
       if (!items.length) { el.append(emptyState()); return; }
       items.forEach(i => el.append(card(i)));
+    } else if (S.tab === "dates") {
+      const items = dateItems();
+      if (!items.length) { el.append(h("div", { class: "empty" }, h("p", {}, h("strong", { text: "No dates to check. " }), "Each weekday the agent looks at your open tasks that are overdue or due in the next business day, checks your email for movement on them, and suggests a new date here. Mondays it lists every overdue task so you can reset the week."))); return; }
+      items.forEach(i => el.append(updateCard(i)));
     } else if (S.tab === "added") {
       const items = addedItems();
-      if (!items.length) { el.append(h("div", { class: "empty" }, h("p", { text: "Nothing added yet. Tasks you add from To review show up here with a link to Notion." }))); return; }
+      if (!items.length) { el.append(h("div", { class: "empty" }, h("p", { text: "Nothing done yet. Tasks you add and dates you change show up here with a link to Notion." }))); return; }
       items.forEach(i => el.append(addedRow(i)));
     } else {
       const items = dismissedItems();
@@ -253,6 +290,59 @@ a { color: var(--accent); text-underline-offset: 2px; }
       h("div", { class: "body" }, eyebrow, titleEl, str(it.summary) ? h("p", { class: "summary", text: str(it.summary) }) : null, fields, links, statusLine(item))
     );
   }
+  function signalLabel(item) {
+    const s = str(item.signal);
+    if (s === "done") return "Looks done";
+    if (s === "moved") return "New date in email";
+    if (s === "active") return "You're on it";
+    const n = businessDaysUntil(item.current_due);
+    return n != null && n < 0 ? "Overdue" : "Due soon";
+  }
+  function updateCard(item) {
+    const it = eff(item), id = item.id;
+    const sel = S.selected.has(id);
+    const dis = !selectable(item) || S.busy;
+    const action = str(it.action) || "move";
+    const t = safeUrl(item.target_url);
+    const eyebrow = h("div", { class: "eyebrow" },
+      h("span", { class: "kind" + (str(item.signal) === "done" ? "" : " ask"), text: signalLabel(item) }),
+      str(item.company) ? h("span", { text: str(item.company) }) : null,
+      str(item.current_due) ? h("span", { text: "· was due " + fmtDay(item.current_due) }) : h("span", { text: "· no date" }),
+      str(item.current_due) ? dueBadge(item.current_due) : null,
+      str(item.current_progress) ? h("span", { text: "· " + str(item.current_progress) }) : null);
+    const titleEl = h("div", { class: "title-static" }, t ? h("a", { href: t, target: "_blank", rel: "noopener", text: str(item.target_title) || "Open task" }) : str(item.target_title));
+    const actSel = selectEl("act-" + id, ACTIONS.map(a => a[0]), action, v => { setEdit(id, { action: v }); render(); }, dis);
+    [...actSel.options].forEach(o => { const a = ACTIONS.find(x => x[0] === o.value); if (a) o.textContent = a[1]; });
+    const fields = h("div", { class: "fields" }, h("label", { class: "field" }, "Action", actSel));
+    let chips = null;
+    if (action === "move") {
+      const inp = h("input", { type: "date", id: "due-" + id, value: str(it.due), disabled: dis });
+      inp.addEventListener("change", e => { setEdit(id, { due: e.target.value || null }); render(); });
+      fields.append(h("label", { class: "field" }, "New date", inp),
+        h("label", { class: "field" }, "Priority", selectEl("prio-" + id, PRIORITIES, str(it.priority) || str(item.current_priority) || "3 - Medium", v => setEdit(id, { priority: v }), dis)));
+      if (str(item.current_progress) !== "In progress") {
+        const cb = h("input", { type: "checkbox", id: "prog-" + id, checked: it.progress === "In progress", disabled: dis });
+        cb.addEventListener("change", e => setEdit(id, { progress: e.target.checked ? "In progress" : null }));
+        fields.append(h("label", { class: "field" }, cb, "Mark in progress"));
+      }
+      const opts = [];
+      if (str(item.due)) opts.push(["Suggested", str(item.due)]);
+      for (const q of quickDates()) if (!opts.some(o => o[1] === q[1])) opts.push(q);
+      chips = h("div", { class: "chips" }, opts.map(([label, d]) => {
+        const b = h("button", { class: "chip", type: "button", "aria-pressed": str(it.due) === d ? "true" : "false", disabled: dis, text: label === "Suggested" ? "Suggested · " + fmtDay(d) : fmtDay(d), title: label });
+        b.addEventListener("click", () => { setEdit(id, { due: d }); render(); });
+        return b;
+      }));
+    }
+    const email = safeUrl(item.email_url);
+    const links = email ? h("div", { class: "links" }, h("a", { href: email, target: "_blank", rel: "noopener", text: "Open email" })) : null;
+    const box = h("input", { type: "checkbox", id: "sel-" + id, "aria-label": "Select " + (str(item.target_title) || "item"), checked: sel, disabled: dis });
+    box.addEventListener("change", e => { if (e.target.checked) S.selected.add(id); else S.selected.delete(id); render(); });
+    return h("article", { class: "item" + (sel ? " selected" : "") },
+      h("div", { class: "check" }, box),
+      h("div", { class: "body" }, eyebrow, titleEl, str(item.reason) ? h("p", { class: "reason", text: str(item.reason) }) : null, fields, chips, links, statusLine(item))
+    );
+  }
   function selectEl(id, opts, value, onChange, disabled, blankLabel) {
     const s = h("select", { id, disabled });
     for (const o of opts) s.append(h("option", { value: o, text: o || blankLabel || "None", selected: o === value }));
@@ -262,39 +352,50 @@ a { color: var(--accent); text-underline-offset: 2px; }
   }
   function statusLine(item) {
     const err = str(item.error);
-    if (item.status === "adding") return h("div", { class: "status", text: "Adding to Notion…" });
-    if (item.status === "approved") return h("div", { class: "status good", text: (err ? err + " " : "") + "Approved. The agent adds it on its next run." });
-    if (item.status === "check") return h("div", { class: "status warn", text: (err || "This may already be in Notion.") + " The agent checks Notion on its next run and adds it only if it's missing." });
+    const upd = isUpdate(item);
+    if (item.status === "adding") return h("div", { class: "status", text: upd ? "Updating Notion…" : "Adding to Notion…" });
+    if (item.status === "approved") return h("div", { class: "status good", text: (err ? err + " " : "") + (upd ? "Approved. The agent updates the task on its next run." : "Approved. The agent adds it on its next run.") });
+    if (item.status === "check") return h("div", { class: "status warn", text: upd ? (err || "Notion didn't confirm the change.") + " The agent checks the task on its next run and applies it if needed." : (err || "This may already be in Notion.") + " The agent checks Notion on its next run and adds it only if it's missing." });
     return null;
   }
   function addedRow(item) {
     const u = safeUrl(item.notion_url);
-    const title = item.type === "note" ? "Note on " + (str(item.target_title) || "a task") : str(item.title);
+    const title = itemTitle(item);
+    const what = isUpdate(item) ? updateSummary(item) : "Added";
     return h("div", { class: "row" },
-      h("div", { style: "min-width:0" }, h("div", { class: "title-static", text: title }), h("div", { class: "meta", text: [str(item.company), item.added_at ? "Added " + fmtStamp(item.added_at) : "", item.added_by === "agent" ? "by the agent" : ""].filter(Boolean).join(" · ") })),
+      h("div", { style: "min-width:0" }, h("div", { class: "title-static", text: title }), h("div", { class: "meta", text: [str(item.company), what, item.added_at ? fmtStamp(item.added_at) : "", item.added_by === "agent" ? "by the agent" : ""].filter(Boolean).join(" · ") })),
       u ? h("a", { href: u, target: "_blank", rel: "noopener", text: "Open in Notion" }) : h("span", { class: "meta", text: "In Notion" })
     );
   }
+  function itemTitle(item) { return item.type === "note" ? "Note on " + (str(item.target_title) || "a task") : isUpdate(item) ? str(item.target_title) || "A task" : str(item.title); }
+  function updateSummary(item) {
+    const a = str(item.action) || "move";
+    if (a === "done") return "Marked done";
+    if (a === "archive") return "Archived";
+    return "Moved to " + (fmtDay(item.due) || "a new date") + (item.progress === "In progress" ? ", in progress" : "");
+  }
   function dismissedRow(item) {
-    const title = item.type === "note" ? "Note on " + (str(item.target_title) || "a task") : str(item.title);
+    const title = itemTitle(item);
     const btn = h("button", { class: "btn", type: "button", id: "restore-" + item.id, text: "Restore", disabled: S.busy });
     btn.addEventListener("click", () => write(item.id, { status: "pending", decided_at: null, error: null }));
     return h("div", { class: "row" },
-      h("div", { style: "min-width:0" }, h("div", { class: "title-static", text: title }), h("div", { class: "meta", text: (item.status === "expired" ? "Expired, not reviewed in 10 business days" : "Dismissed") + (item.decided_at ? " · " + fmtStamp(item.decided_at) : "") })),
+      h("div", { style: "min-width:0" }, h("div", { class: "title-static", text: title }), h("div", { class: "meta", text: (item.status === "expired" ? "Expired, not reviewed in time" : isUpdate(item) ? (str(item.error) || "Kept as is") : "Dismissed") + (item.decided_at ? " · " + fmtStamp(item.decided_at) : "") })),
       btn
     );
   }
   function renderBar() {
     const bar = document.getElementById("bar");
-    const show = S.loaded && S.tab === "review" && reviewItems().some(selectable);
+    const show = S.loaded && (S.tab === "review" || S.tab === "dates") && tabItems().some(selectable);
     bar.hidden = !show;
     if (!show) return;
-    const n = S.selected.size;
+    const dates = S.tab === "dates";
+    const n = tabItems().filter(i => S.selected.has(i.id)).length;
     document.getElementById("count").textContent = S.busy ? "Working…" : n + " selected";
     document.getElementById("add").disabled = !n || S.busy;
     document.getElementById("dismiss").disabled = !n || S.busy;
-    document.getElementById("add").textContent = mcp ? "Add to Notion" : "Approve";
-    const all = reviewItems().filter(selectable);
+    document.getElementById("add").textContent = !mcp ? "Approve" : dates ? "Update Notion" : "Add to Notion";
+    document.getElementById("dismiss").textContent = dates ? "Keep as is" : "Dismiss";
+    const all = tabItems().filter(selectable);
     document.getElementById("selall").textContent = all.length && all.every(i => S.selected.has(i.id)) ? "Clear" : "Select all";
     document.getElementById("selall").disabled = S.busy;
   }
@@ -342,8 +443,50 @@ a { color: var(--accent); text-underline-offset: 2px; }
     }
   }
 
+  function updateFields(it) {
+    const a = str(it.action) || "move";
+    return { action: a, due: a === "move" ? (it.due || null) : null, priority: str(it.priority) || str(it.current_priority) || null, progress: a === "move" && it.progress === "In progress" ? "In progress" : null };
+  }
+  function updateProps(f, base) {
+    if (f.action === "done") return { "Progress": "Done" };
+    if (f.action === "archive") return { "Progress": "Archived" };
+    const p = {};
+    const start = str(base.current_start);
+    if (start && start <= f.due) { p["date:Timeline:start"] = start; p["date:Timeline:end"] = f.due; }
+    else { p["date:Timeline:start"] = f.due; if (start) p["date:Timeline:end"] = null; }
+    p["date:Timeline:is_datetime"] = 0;
+    p["Urgency"] = urgencyFor(f.due);
+    if (f.priority && f.priority !== str(base.current_priority)) p["Priority"] = f.priority;
+    if (f.progress && str(base.current_progress) !== "In progress") p["Progress"] = "In progress";
+    return p;
+  }
+  async function updateOne(id, base) {
+    const f = updateFields(eff(base));
+    if (f.action === "move" && !/^\d{4}-\d{2}-\d{2}$/.test(str(f.due))) { S.banner = { kind: "warn", text: "Pick a new date for " + (str(base.target_title) || "that task") + " first." }; return "stop"; }
+    const target = safeUrl(base.target_url);
+    if (!target) { await write(id, Object.assign({}, f, { status: "approved", decided_at: nowIso(), error: "No Notion link on this item." })); return "ok"; }
+    if (!mcp) { await write(id, Object.assign({}, f, { status: "approved", decided_at: nowIso(), error: null })); S.edits.delete(id); return "ok"; }
+    await write(id, Object.assign({}, f, { status: "adding", decided_at: nowIso(), error: null }));
+    try {
+      await mcp.callTool("Notion", "notion-update-page", { page_id: target, command: "update_properties", properties: updateProps(f, base), allow_async: false });
+      await write(id, { status: "added", notion_url: target, added_at: nowIso(), added_by: "page" });
+      S.edits.delete(id);
+      return "ok";
+    } catch (e) {
+      const code = e && e.code;
+      if (CONNECTOR_CODES.includes(code)) {
+        await write(id, { status: "approved", error: null });
+        S.banner = { kind: "warn", text: connectorCopy(code) + " What you approved stays approved, and the agent applies it on its next run." };
+        return "stop";
+      }
+      if (code === "tool_error") { await write(id, { status: "approved", error: "Notion refused the change." }); return "ok"; }
+      await write(id, { status: "check", error: "Notion didn't confirm the change." });
+      return "ok";
+    }
+  }
   async function addOne(id) {
     const base = byId(id); if (!base || !selectable(base)) return "ok";
+    if (isUpdate(base)) return updateOne(id, base);
     const it = Object.assign({}, eff(base), base.type === "note" ? {} : taskFields(eff(base)));
     const fields = base.type === "note" ? {} : taskFields(eff(base));
     if (!mcp) { await write(id, Object.assign({}, fields, { status: "approved", decided_at: nowIso(), error: null })); S.edits.delete(id); return "ok"; }
@@ -378,7 +521,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
     }
   }
   async function addSelected() {
-    const ids = reviewItems().filter(i => S.selected.has(i.id) && selectable(i)).map(i => i.id);
+    const ids = tabItems().filter(i => S.selected.has(i.id) && selectable(i)).map(i => i.id);
     if (!ids.length) return;
     S.busy = true; S.banner = null; render();
     let added = 0;
@@ -389,21 +532,21 @@ a { color: var(--accent); text-underline-offset: 2px; }
       if (r === "stop") break;
     }
     S.busy = false;
-    if (!S.banner && added) S.banner = { kind: "", text: mcp ? "Done. Check the Added tab for Notion links." : "Approved. The agent adds them on its next run." };
+    if (!S.banner && added) S.banner = { kind: "", text: mcp ? "Done. Check the Done tab for Notion links." : "Approved. The agent finishes them on its next run." };
     render();
   }
   async function dismissSelected() {
-    const ids = reviewItems().filter(i => S.selected.has(i.id) && selectable(i)).map(i => i.id);
+    const ids = tabItems().filter(i => S.selected.has(i.id) && selectable(i)).map(i => i.id);
     if (!ids.length) return;
     S.busy = true; render();
-    for (const id of ids) { try { await write(id, { status: "dismissed", decided_at: nowIso() }); S.selected.delete(id); } catch (e) { break; } }
+    for (const id of ids) { try { await write(id, { status: "dismissed", decided_at: nowIso(), error: null }); S.selected.delete(id); } catch (e) { break; } }
     S.busy = false; render();
   }
 
   document.getElementById("add").addEventListener("click", addSelected);
   document.getElementById("dismiss").addEventListener("click", dismissSelected);
   document.getElementById("selall").addEventListener("click", () => {
-    const all = reviewItems().filter(selectable);
+    const all = tabItems().filter(selectable);
     if (all.every(i => S.selected.has(i.id))) S.selected.clear(); else all.forEach(i => S.selected.add(i.id));
     render();
   });
