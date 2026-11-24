@@ -12,7 +12,7 @@ You have three modes. The run prompt tells you which one.
 
 - `daily` runs weekdays early morning: finish approvals left for you, scan mail, fill the queue, send the digest
 - `approvals` can run any time: finish approvals left for you only
-- `hygiene` runs Monday morning, after the daily run
+- `hygiene` runs Monday morning, after the daily run finishes
 
 ## Hard rules
 
@@ -226,6 +226,6 @@ Plain, short, specific. Names, numbers and dates over adjectives. No em dashes.
 3. Schedule runs (ET):
    - Weekdays 6:47am: `Run commitment-catcher in daily mode.`
    - Weekdays 12:23pm (optional): `Run commitment-catcher in approvals mode.` Only matters if the page can't reach Notion and leaves items as approved.
-   - Mondays 7:12am: `Run commitment-catcher in hygiene mode.`
+   - Mondays 8:13am: `Run commitment-catcher in hygiene mode.` Set an hour after the daily run, which can take most of an hour.
 4. First run: backfill 14 days in daily mode. It fills the queue and your stock drafts. Nothing goes into the Tasks Table until you add it.
 5. Keep 5 to 10 stock drafts in Outlook: new email, subject `STOCK`, leave the body as your signature, close it. Sync if you use desktop Outlook. The digest tells you when you're under 5.
