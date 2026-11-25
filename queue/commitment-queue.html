@@ -452,73 +452,93 @@ aside.rail { display: none; }
 
 
   // ---------- today view: live tasks from Notion, calendar and focus from the agent's snapshot ----------
-  const Q = { a: null, b: null, moreA: false };
+  // Notion caps SQL queries per workspace per hour, so the page reads as little as it can:
+  // a saved view when one is set in meta (view reads don't count), else one SQL query, cached 10 minutes.
+  const Q = { rows: null, more: false };
   const LIVE = "(\"Progress\" IS NULL OR \"Progress\" NOT IN ('Done','Archived','Paused','Reminders'))";
   const DUE = "substr(COALESCE(\"date:Timeline:end\", \"date:Timeline:start\"), 1, 10)";
   const COLS = "url, \"Task Name\", \"Priority\", \"Progress\", \"Company\", \"date:Timeline:start\", \"date:Timeline:end\"";
   const TABLE = "\"collection://" + DS_ID + "\"";
-  const SQL_A = "SELECT " + COLS + " FROM " + TABLE + " WHERE \"Task Lead(s)\" LIKE ? AND " + LIVE + " AND " + DUE + " <= ? ORDER BY " + DUE + " LIMIT 100";
-  const SQL_B = "SELECT " + COLS + " FROM " + TABLE + " WHERE \"Task Lead(s)\" LIKE ? AND " + LIVE + " AND \"Priority\" IN ('1 - High','2 - Mid High') ORDER BY \"Priority\", " + DUE + " LIMIT 100";
-  const QUERY_CACHE = { staleTime: 120000, gcTime: 86400000 };
-  let watching = false;
+  const SQL_ONE = "SELECT " + COLS + " FROM " + TABLE + " WHERE \"Task Lead(s)\" LIKE ? AND " + LIVE + " AND (" + DUE + " <= ? OR \"Priority\" IN ('1 - High','2 - Mid High')) ORDER BY " + DUE + " LIMIT 100";
+  const SKIP = ["Done", "Archived", "Paused", "Reminders"];
+  const QUERY_CACHE = { staleTime: 600000, gcTime: 86400000 };
+  let started = false, loading = false;
 
   function pageId(u) { const seg = str(u).split(/[?#]/)[0].split("/").pop() || ""; const x = seg.replace(/-/g, ""); return /[0-9a-f]{32}$/i.test(x) ? x.slice(-32).toLowerCase() : str(u); }
-  function taskInput(which) {
-    const like = "%" + str(S.meta && S.meta.notion_user_id) + "%";
-    return { data: { mode: "sql", data_source_urls: ["collection://" + DS_ID], query: which === "a" ? SQL_A : SQL_B, params: which === "a" ? [like, iso(addBiz(15))] : [like] } };
-  }
+  function viewUrl() { const v = str(S.meta && S.meta.tasks_view_url); return /^(view:\/\/|https:\/\/)/.test(v) ? v : ""; }
   function rowsFrom(res) {
     let p = res && res.payload;
     if (typeof p === "string") { try { p = JSON.parse(p); } catch (e) { p = null; } }
     if (!p || !Array.isArray(p.results)) {
       try { const t = ((res && res.content) || []).find(c => c && c.type === "text"); p = t ? JSON.parse(t.text) : null; } catch (e) { p = null; }
     }
-    return p && Array.isArray(p.results) ? { rows: p.results, more: !!p.has_more } : null;
+    return p && Array.isArray(p.results) ? { rows: p.results, more: !!p.has_more, next: str(p.next_cursor) } : null;
   }
   function taskFromRow(r) {
     const u = safeUrl(str(r && r.url)); if (!u) return null;
     const st = str(r["date:Timeline:start"]).slice(0, 10), en = str(r["date:Timeline:end"]).slice(0, 10);
     let co = []; try { const x = JSON.parse(str(r.Company) || "[]"); if (Array.isArray(x)) co = x.map(String); } catch (e) {}
-    return { url: u, title: str(r["Task Name"]) || "Untitled task", priority: str(r.Priority), progress: str(r.Progress) || "Not started", company: co.join(", "), start: st || null, end: en || null, due: en || st || null };
+    return { url: u, title: str(r["Task Name"]).trim() || "Untitled task", priority: str(r.Priority), progress: str(r.Progress) || "Not started", company: co.join(", "), start: st || null, end: en || null, due: en || st || null };
   }
   function mergeTasks() {
     const m = new Map();
-    for (const r of [...(Q.a || []), ...(Q.b || [])]) { const t = taskFromRow(r); if (t && !m.has(pageId(t.url))) m.set(pageId(t.url), t); }
+    for (const r of Q.rows || []) { const t = taskFromRow(r); if (t && !m.has(pageId(t.url))) m.set(pageId(t.url), t); }
     S.tasks = m;
   }
-  function onTasks(which, ev) {
-    S.refreshing = false;
-    if (ev.type === "data") {
-      const r = rowsFrom(ev.result);
-      if (!r) { S.tcode = "unreadable"; S.tstate = S.tasks.size ? "ok" : "error"; render(); return; }
-      Q[which] = r.rows; if (which === "a") Q.moreA = r.more;
-      const c = ev.result && ev.result.cache;
-      S.tat = c && c.storedAt ? c.storedAt : Date.now();
-      mergeTasks(); S.tstate = "ok"; S.tcode = null; render(); return;
+  function isLimit(e) {
+    let t = str(e && e.message);
+    try { t += " " + JSON.stringify(e && e.result); } catch (x) {}
+    return /usage_limit|usage limit|allowance/i.test(t);
+  }
+  async function fetchTasks(fresh) {
+    const cache = fresh ? Object.assign({ refresh: true }, QUERY_CACHE) : QUERY_CACHE;
+    const uid = str(S.meta.notion_user_id);
+    const v = viewUrl();
+    if (!v) {
+      const res = await mcp.callTool("Notion", "notion-query-data-sources", { data: { mode: "sql", data_source_urls: ["collection://" + DS_ID], query: SQL_ONE, params: ["%" + uid + "%", iso(addBiz(15))] } }, { cache });
+      const r = rowsFrom(res);
+      return r ? { rows: r.rows, more: r.more, res } : null;
     }
-    const code = (ev.error && ev.error.code) || "upstream_error";
+    let rows = [], cursor = "", more = false, last = null;
+    for (let i = 0; i < 5; i++) {
+      const data = { mode: "view", view_url: v, page_size: 100 };
+      if (cursor) data.start_cursor = cursor;
+      const res = await mcp.callTool("Notion", "notion-query-data-sources", { data }, { cache });
+      const r = rowsFrom(res); if (!r) return null;
+      if (!last) last = res;
+      rows = rows.concat(r.rows); cursor = r.next; more = r.more;
+      if (!more || !cursor) break;
+    }
+    rows = rows.filter(x => str(x["Task Lead(s)"]).includes(uid) && !SKIP.includes(str(x.Progress)));
+    return { rows, more, res: last };
+  }
+  function taskError(e) {
+    const code = (e && e.code) || "upstream_error";
+    if (code === "tool_error" && isLimit(e)) { S.tcode = "limit"; S.tstate = S.tasks.size ? "ok" : "limit"; return; }
     if (code === "approval_required" || code === "consent_required") S.tstate = "ask";
-    else if (["needs_reauth", "server_not_connected", "server_not_found", "selection_required", "not_in_manifest", "blocked_by_policy"].includes(code)) { Q.a = Q.b = null; S.tasks = new Map(); S.tstate = "denied"; }
-    else if (["not_granted", "capability_disabled", "capability_removed", "bad_request", "transform_error"].includes(code)) S.tstate = S.tasks.size ? "ok" : "none";
+    else if (["needs_reauth", "server_not_connected", "server_not_found", "selection_required", "not_in_manifest", "blocked_by_policy"].includes(code)) { Q.rows = null; S.tasks = new Map(); S.tstate = "denied"; }
+    else if (["not_granted", "capability_disabled", "capability_removed"].includes(code)) S.tstate = S.tasks.size ? "ok" : "none";
     else S.tstate = S.tasks.size ? "ok" : "error";
-    S.tcode = code; render();
+    S.tcode = code;
   }
-  function startWatches() {
-    if (watching || !mcp || typeof mcp.watchTool !== "function" || !S.meta || !str(S.meta.notion_user_id)) return;
-    watching = true;
-    if (!S.tasks.size) S.tstate = "loading";
-    for (const w of ["a", "b"]) mcp.watchTool("Notion", "notion-query-data-sources", taskInput(w), ev => onTasks(w, ev), { cache: QUERY_CACHE });
-    render();
+  async function loadTasks(fresh) {
+    if (loading || !mcp || !S.meta || !str(S.meta.notion_user_id)) return;
+    loading = true; S.refreshing = !!fresh; if (!S.tasks.size) S.tstate = "loading"; render();
+    try {
+      const r = await fetchTasks(fresh);
+      if (!r) { S.tcode = "unreadable"; S.tstate = S.tasks.size ? "ok" : "error"; }
+      else {
+        Q.rows = r.rows; Q.more = r.more;
+        const c = r.res && r.res.cache;
+        S.tat = c && c.storedAt ? c.storedAt : Date.now();
+        mergeTasks(); S.tstate = "ok"; S.tcode = null;
+      }
+    } catch (e) { taskError(e); }
+    loading = false; S.refreshing = false; render();
   }
-  async function loadTasksNow() {
-    if (!mcp || !S.meta) return;
-    S.tstate = S.tasks.size ? "ok" : "loading"; S.tcode = null; S.refreshing = true; render();
-    for (const w of ["a", "b"]) {
-      try { onTasks(w, { type: "data", result: await mcp.callTool("Notion", "notion-query-data-sources", taskInput(w), { cache: Object.assign({ refresh: true }, QUERY_CACHE) }) }); }
-      catch (e) { onTasks(w, { type: "error", error: e }); return; }
-    }
-  }
-  function refreshTasks() { loadTasksNow(); }
+  function startWatches() { if (started || !mcp || !S.meta || !str(S.meta.notion_user_id)) return; started = true; loadTasks(false); }
+  function loadTasksNow() { loadTasks(true); }
+  function refreshTasks() { loadTasks(true); }
 
   function allTasks() { return [...S.tasks.values()]; }
   function findTask(u) { return S.tasks.get(pageId(u)) || null; }
@@ -657,7 +677,6 @@ aside.rail { display: none; }
       }
       S.moves.delete(t.url); S.open = null;
       S.tmsg = { kind: "", text: (action === "done" ? "Marked done: " : "Saved: ") + t.title + (action === "move" && props["date:Timeline:start"] !== undefined ? ", due " + fmtDay(t.due) : "") + "." };
-      if (mcp.invalidate) mcp.invalidate("Notion", "notion-query-data-sources").catch(() => {});
     } catch (e) {
       const code = e && e.code;
       try {
@@ -678,10 +697,12 @@ aside.rail { display: none; }
       case "ask": return h("div", { class: "banner warn" }, h("div", { text: "This page needs your OK to read your Notion tasks (read only)." }), h("button", { class: "btn", type: "button", style: "margin-top:8px", onclick: loadTasksNow }, "Show my tasks"));
       case "denied": return h("div", { class: "banner warn", text: connectorCopy(S.tcode) + " The queue still works without it." });
       case "none": return h("p", { class: "muted", text: "Live tasks show when this page is open on claude.ai." });
+      case "limit": return h("div", { class: "banner warn" }, "Notion's hourly limit on task queries is used up, so your tasks can't load right now. It resets within the hour. ", retry);
       case "error": return h("div", { class: "banner warn" }, "Couldn't load your tasks (" + S.tcode + "). ", retry);
       default:
         return h("p", { class: "muted" },
-          S.tcode ? "Couldn't refresh (" + S.tcode + "). Showing tasks from " + at + ". " : "Notion as of " + at + ". ",
+          S.tcode === "limit" ? "Notion's hourly query limit is used up, so this list is from " + at + " plus the changes you saved here. Saves still go through. Refresh again within the hour. "
+            : S.tcode ? "Couldn't refresh (" + S.tcode + "). Showing tasks from " + at + ". " : "Notion as of " + at + ". ",
           "Paused and Reminders are left out. ", retry);
     }
   }
