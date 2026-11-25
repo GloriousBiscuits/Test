@@ -89,6 +89,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .btn:disabled { opacity: 0.45; cursor: default; }
 .btn:focus-visible, .tab:focus-visible, .check input:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
+.bar.wide .bar-inner { max-width: 1148px; }
 .bar-inner { max-width: 760px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .bar .count { font-size: 0.875rem; color: var(--muted); margin-right: auto; font-variant-numeric: tabular-nums; }
 .linkbtn { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-size: 0.875rem; }
@@ -98,17 +99,64 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .chip:disabled { opacity: 0.45; cursor: default; }
 .chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .reason { margin: 0; color: var(--muted); font-size: 0.875rem; overflow-wrap: anywhere; }
+/* Today view and the week rail beside the Dates tab. */
+.wrap.wide { max-width: 1180px; }
+.cols { display: block; }
+aside.rail { display: none; }
+@media (min-width: 1100px) {
+  .wrap.wide .cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+  .wrap.wide aside.rail { display: block; position: sticky; top: 16px; max-height: calc(100vh - 110px); overflow-y: auto; }
+}
+.rail-in { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.sec { display: grid; gap: 10px; margin-bottom: 28px; min-width: 0; }
+.sec h2, .rail-in h2 { font-size: 1.0625rem; font-weight: 600; color: var(--heading); margin: 0; }
+.lede { margin: 0; font-weight: 600; color: var(--ink); }
+.muted { color: var(--muted); font-size: 0.8125rem; margin: 0; overflow-wrap: anywhere; }
+.foot { margin: 0; font-size: 0.75rem; color: var(--muted); }
+.tlist { display: grid; gap: 8px; }
+.trow { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
+.trow.open { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.trow-title { appearance: none; background: none; border: 0; padding: 0; text-align: left; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; overflow-wrap: anywhere; }
+.trow-title:hover { color: var(--accent); }
+.trow-title:focus-visible, .cell:focus-visible, .linkbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tmeta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 0.8125rem; color: var(--muted); }
+.pbadge { font-size: 0.6875rem; font-weight: 600; padding: 1px 6px; border-radius: var(--radius); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.pbadge.p1 { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+.pbadge.p2 { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.editor { display: grid; gap: 8px; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 0.875rem; }
+.strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+.cell { appearance: none; font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; cursor: pointer; display: grid; gap: 1px; color: var(--ink); min-width: 0; }
+.cell[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.cell .d { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+.cell .c { font-size: 1.125rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.cell .m { font-size: 0.6875rem; color: var(--muted); white-space: nowrap; }
+.cell.late .c { color: var(--bad); }
+.day { display: grid; gap: 8px; }
+.mtgs { display: grid; }
+.mtg { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; font-size: 0.875rem; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.mtg .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+.mtg .w { color: var(--muted); font-size: 0.8125rem; }
+.ctx { font-size: 0.8125rem; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.chip .load { margin-left: 6px; font-size: 0.6875rem; color: var(--muted); }
+.chip[aria-pressed="true"] .load { color: var(--accent); }
+.item.flash { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus) inset; }
+.was { font-size: 0.75rem; color: var(--muted); }
+.editor-lite { display: grid; gap: 8px; }
 @media (prefers-reduced-motion: no-preference) { .item { transition: border-color 120ms ease, box-shadow 120ms ease; } }
 </style>
 
-<div class="wrap">
+<div class="wrap" id="wrap">
   <header>
     <h1>Commitment Queue</h1>
     <p class="sub" id="sub">Connecting…</p>
   </header>
   <div id="banner"></div>
   <nav class="tabs" role="tablist" id="tabs"></nav>
-  <main class="list" id="list"></main>
+  <div class="cols">
+    <main class="list" id="list"></main>
+    <aside class="rail" id="rail" aria-label="Your week"></aside>
+  </div>
 </div>
 <div class="bar" id="bar" hidden>
   <div class="bar-inner">
@@ -127,7 +175,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
   const REVIEW = ["pending", "adding", "approved", "check"];
   const CONNECTOR_CODES = ["approval_required", "needs_reauth", "server_not_connected", "selection_required", "not_in_manifest", "blocked_by_policy", "not_granted", "capability_disabled", "capability_removed", "server_not_found", "consent_required"];
 
-  const S = { items: [], meta: null, tab: "review", selected: new Set(), edits: new Map(), busy: false, loaded: false, dbError: null, slow: false, banner: null };
+  const S = { tasks: new Map(), tstate: "idle", tcode: null, tat: null, snap: null, open: null, day: null, moves: new Map(), saving: null, tmsg: null, flash: null, items: [], meta: null, tab: "today", selected: new Set(), edits: new Map(), busy: false, loaded: false, dbError: null, slow: false, banner: null };
   let db = null, mcp = null;
 
   // ---------- helpers ----------
@@ -153,10 +201,13 @@ a { color: var(--accent); text-underline-offset: 2px; }
   function today() { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
   function fmtDay(s) { const d = parseDay(s); return d ? d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : ""; }
   function fmtStamp(s) { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+  // NYSE holidays; dates you pick never land on these.
+  const HOLIDAYS = new Set(["2026-11-26", "2026-12-25", "2027-01-01", "2027-01-18", "2027-02-15", "2027-03-26", "2027-05-31", "2027-06-18", "2027-07-05", "2027-09-06", "2027-11-25", "2027-12-24"]);
+  function isOff(x) { const w = x.getDay(); return w === 0 || w === 6 || HOLIDAYS.has(iso(x)); }
   function businessDaysUntil(s) {
     const d = parseDay(s); if (!d) return null;
     const t = today(); const sign = d >= t ? 1 : -1; let n = 0; const cur = new Date(t);
-    while ((sign > 0 && cur < d) || (sign < 0 && cur > d)) { cur.setDate(cur.getDate() + sign); const w = cur.getDay(); if (w !== 0 && w !== 6) n += sign; }
+    while ((sign > 0 && cur < d) || (sign < 0 && cur > d)) { cur.setDate(cur.getDate() + sign); if (!isOff(cur)) n += sign; }
     return n;
   }
   function dueBadge(s) {
@@ -190,14 +241,14 @@ a { color: var(--accent); text-underline-offset: 2px; }
   }
   function tabItems() { return S.tab === "dates" ? dateItems() : S.tab === "review" ? reviewItems() : []; }
   function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
-  function weekday(d) { const x = new Date(d); while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() + 1); return x; }
-  function addBiz(n) { const x = today(); let k = 0; while (k < n) { x.setDate(x.getDate() + 1); if (x.getDay() !== 0 && x.getDay() !== 6) k++; } return x; }
-  function nextDow(dow) { const x = today(); do { x.setDate(x.getDate() + 1); } while (x.getDay() !== dow); return x; }
+  function weekday(d) { const x = new Date(d); while (isOff(x)) x.setDate(x.getDate() + 1); return x; }
+  function addBiz(n) { const x = today(); let k = 0; while (k < n) { x.setDate(x.getDate() + 1); if (!isOff(x)) k++; } return x; }
+  function nextDow(dow) { const x = today(); do { x.setDate(x.getDate() + 1); } while (x.getDay() !== dow); return weekday(x); }
   function plusDays(n) { const x = today(); x.setDate(x.getDate() + n); return weekday(x); }
   function monthEnd() {
     const t = today(); let x = new Date(t.getFullYear(), t.getMonth() + 1, 0);
-    while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() - 1);
-    if (x <= t) { x = new Date(t.getFullYear(), t.getMonth() + 2, 0); while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() - 1); }
+    while (isOff(x)) x.setDate(x.getDate() - 1);
+    if (x <= t) { x = new Date(t.getFullYear(), t.getMonth() + 2, 0); while (isOff(x)) x.setDate(x.getDate() - 1); }
     return x;
   }
   function quickDates() {
@@ -210,7 +261,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
 
   // ---------- render ----------
   function render() {
-    renderSub(); renderBanner(); renderTabs(); renderList(); renderBar();
+    renderSub(); renderBanner(); renderTabs(); renderList(); renderRail(); renderBar();
   }
   function renderSub() {
     const sub = document.getElementById("sub");
@@ -225,14 +276,15 @@ a { color: var(--accent); text-underline-offset: 2px; }
     if (S.banner) el.append(h("div", { class: "banner " + (S.banner.kind || ""), text: S.banner.text }));
   }
   function renderTabs() {
-    const tabs = [["review", "New", reviewItems().length], ["dates", "Dates", dateItems().length], ["added", "Done", addedItems().length], ["dismissed", "Skipped", dismissedItems().length]];
+    const tabs = [["today", "Today", null], ["review", "New", reviewItems().length], ["dates", "Dates", dateItems().length], ["added", "Done", addedItems().length], ["dismissed", "Skipped", dismissedItems().length]];
     const el = document.getElementById("tabs"); el.replaceChildren();
     for (const [key, label, n] of tabs) {
-      el.append(h("button", { class: "tab", role: "tab", type: "button", "aria-selected": S.tab === key ? "true" : "false", id: "tab-" + key, onclick: () => { S.tab = key; render(); } }, label, h("span", { class: "n", text: n })));
+      el.append(h("button", { class: "tab", role: "tab", type: "button", "aria-selected": S.tab === key ? "true" : "false", id: "tab-" + key, onclick: () => { S.tab = key; render(); } }, label, n == null ? null : h("span", { class: "n", text: n })));
     }
   }
   function renderList() {
     const el = document.getElementById("list"); el.replaceChildren();
+    if (S.tab === "today") { renderToday(el); return; }
     if (!S.loaded) return;
     if (S.tab === "review") {
       const items = reviewItems();
@@ -295,6 +347,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
     if (s === "done") return "Looks done";
     if (s === "moved") return "New date in email";
     if (s === "active") return "You're on it";
+    if (s === "manual") return "Your change";
     const n = businessDaysUntil(item.current_due);
     return n != null && n < 0 ? "Overdue" : "Due soon";
   }
@@ -306,6 +359,7 @@ a { color: var(--accent); text-underline-offset: 2px; }
     const t = safeUrl(item.target_url);
     const eyebrow = h("div", { class: "eyebrow" },
       h("span", { class: "kind" + (str(item.signal) === "done" ? "" : " ask"), text: signalLabel(item) }),
+      item.priority_drop ? h("span", { class: "kind", text: "Lower priority" }) : null,
       str(item.company) ? h("span", { text: str(item.company) }) : null,
       str(item.current_due) ? h("span", { text: "· was due " + fmtDay(item.current_due) }) : h("span", { text: "· no date" }),
       str(item.current_due) ? dueBadge(item.current_due) : null,
@@ -318,27 +372,22 @@ a { color: var(--accent); text-underline-offset: 2px; }
     if (action === "move") {
       const inp = h("input", { type: "date", id: "due-" + id, value: str(it.due), disabled: dis });
       inp.addEventListener("change", e => { setEdit(id, { due: e.target.value || null }); render(); });
+      const prNow = str(it.priority) || str(item.current_priority) || "3 - Medium";
       fields.append(h("label", { class: "field" }, "New date", inp),
-        h("label", { class: "field" }, "Priority", selectEl("prio-" + id, PRIORITIES, str(it.priority) || str(item.current_priority) || "3 - Medium", v => setEdit(id, { priority: v }), dis)));
+        h("label", { class: "field" }, "Priority", selectEl("prio-" + id, PRIORITIES, prNow, v => { setEdit(id, { priority: v }); render(); }, dis)),
+        str(item.current_priority) && prNow !== str(item.current_priority) ? h("span", { class: "was", text: "was " + str(item.current_priority) }) : null);
       if (str(item.current_progress) !== "In progress") {
         const cb = h("input", { type: "checkbox", id: "prog-" + id, checked: it.progress === "In progress", disabled: dis });
         cb.addEventListener("change", e => setEdit(id, { progress: e.target.checked ? "In progress" : null }));
         fields.append(h("label", { class: "field" }, cb, "Mark in progress"));
       }
-      const opts = [];
-      if (str(item.due)) opts.push(["Suggested", str(item.due)]);
-      for (const q of quickDates()) if (!opts.some(o => o[1] === q[1])) opts.push(q);
-      chips = h("div", { class: "chips" }, opts.map(([label, d]) => {
-        const b = h("button", { class: "chip", type: "button", "aria-pressed": str(it.due) === d ? "true" : "false", disabled: dis, text: label === "Suggested" ? "Suggested · " + fmtDay(d) : fmtDay(d), title: label });
-        b.addEventListener("click", () => { setEdit(id, { due: d }); render(); });
-        return b;
-      }));
+      chips = h("div", { class: "editor-lite" }, dateChips(str(it.due), d => { setEdit(id, { due: d }); S.day = d; render(); }, dis, str(item.due)), str(it.due) ? dayContext(str(it.due), item.target_url) : null);
     }
     const email = safeUrl(item.email_url);
     const links = email ? h("div", { class: "links" }, h("a", { href: email, target: "_blank", rel: "noopener", text: "Open email" })) : null;
     const box = h("input", { type: "checkbox", id: "sel-" + id, "aria-label": "Select " + (str(item.target_title) || "item"), checked: sel, disabled: dis });
     box.addEventListener("change", e => { if (e.target.checked) S.selected.add(id); else S.selected.delete(id); render(); });
-    return h("article", { class: "item" + (sel ? " selected" : "") },
+    return h("article", { class: "item" + (sel ? " selected" : "") + (S.flash === id ? " flash" : ""), id: "card-" + id },
       h("div", { class: "check" }, box),
       h("div", { class: "body" }, eyebrow, titleEl, str(item.reason) ? h("p", { class: "reason", text: str(item.reason) }) : null, fields, chips, links, statusLine(item))
     );
@@ -400,6 +449,325 @@ a { color: var(--accent); text-underline-offset: 2px; }
     document.getElementById("selall").disabled = S.busy;
   }
   function setEdit(id, patch) { S.edits.set(id, Object.assign({}, S.edits.get(id) || {}, patch)); }
+
+
+  // ---------- today view: live tasks from Notion, calendar and focus from the agent's snapshot ----------
+  const Q = { a: null, b: null, moreA: false };
+  const LIVE = "(\"Progress\" IS NULL OR \"Progress\" NOT IN ('Done','Archived','Paused','Reminders'))";
+  const DUE = "substr(COALESCE(\"date:Timeline:end\", \"date:Timeline:start\"), 1, 10)";
+  const COLS = "url, \"Task Name\", \"Priority\", \"Progress\", \"Company\", \"date:Timeline:start\", \"date:Timeline:end\"";
+  const TABLE = "\"collection://" + DS_ID + "\"";
+  const SQL_A = "SELECT " + COLS + " FROM " + TABLE + " WHERE \"Task Lead(s)\" LIKE ? AND " + LIVE + " AND " + DUE + " <= ? ORDER BY " + DUE + " LIMIT 100";
+  const SQL_B = "SELECT " + COLS + " FROM " + TABLE + " WHERE \"Task Lead(s)\" LIKE ? AND " + LIVE + " AND \"Priority\" IN ('1 - High','2 - Mid High') ORDER BY \"Priority\", " + DUE + " LIMIT 100";
+  const QUERY_CACHE = { staleTime: 120000, gcTime: 86400000 };
+  let watching = false;
+
+  function pageId(u) { const seg = str(u).split(/[?#]/)[0].split("/").pop() || ""; const x = seg.replace(/-/g, ""); return /[0-9a-f]{32}$/i.test(x) ? x.slice(-32).toLowerCase() : str(u); }
+  function taskInput(which) {
+    const like = "%" + str(S.meta && S.meta.notion_user_id) + "%";
+    return { data: { mode: "sql", data_source_urls: ["collection://" + DS_ID], query: which === "a" ? SQL_A : SQL_B, params: which === "a" ? [like, iso(addBiz(15))] : [like] } };
+  }
+  function rowsFrom(res) {
+    let p = res && res.payload;
+    if (typeof p === "string") { try { p = JSON.parse(p); } catch (e) { p = null; } }
+    if (!p || !Array.isArray(p.results)) {
+      try { const t = ((res && res.content) || []).find(c => c && c.type === "text"); p = t ? JSON.parse(t.text) : null; } catch (e) { p = null; }
+    }
+    return p && Array.isArray(p.results) ? { rows: p.results, more: !!p.has_more } : null;
+  }
+  function taskFromRow(r) {
+    const u = safeUrl(str(r && r.url)); if (!u) return null;
+    const st = str(r["date:Timeline:start"]).slice(0, 10), en = str(r["date:Timeline:end"]).slice(0, 10);
+    let co = []; try { const x = JSON.parse(str(r.Company) || "[]"); if (Array.isArray(x)) co = x.map(String); } catch (e) {}
+    return { url: u, title: str(r["Task Name"]) || "Untitled task", priority: str(r.Priority), progress: str(r.Progress) || "Not started", company: co.join(", "), start: st || null, end: en || null, due: en || st || null };
+  }
+  function mergeTasks() {
+    const m = new Map();
+    for (const r of [...(Q.a || []), ...(Q.b || [])]) { const t = taskFromRow(r); if (t && !m.has(pageId(t.url))) m.set(pageId(t.url), t); }
+    S.tasks = m;
+  }
+  function onTasks(which, ev) {
+    S.refreshing = false;
+    if (ev.type === "data") {
+      const r = rowsFrom(ev.result);
+      if (!r) { S.tcode = "unreadable"; S.tstate = S.tasks.size ? "ok" : "error"; render(); return; }
+      Q[which] = r.rows; if (which === "a") Q.moreA = r.more;
+      const c = ev.result && ev.result.cache;
+      S.tat = c && c.storedAt ? c.storedAt : Date.now();
+      mergeTasks(); S.tstate = "ok"; S.tcode = null; render(); return;
+    }
+    const code = (ev.error && ev.error.code) || "upstream_error";
+    if (code === "approval_required" || code === "consent_required") S.tstate = "ask";
+    else if (["needs_reauth", "server_not_connected", "server_not_found", "selection_required", "not_in_manifest", "blocked_by_policy"].includes(code)) { Q.a = Q.b = null; S.tasks = new Map(); S.tstate = "denied"; }
+    else if (["not_granted", "capability_disabled", "capability_removed", "bad_request", "transform_error"].includes(code)) S.tstate = S.tasks.size ? "ok" : "none";
+    else S.tstate = S.tasks.size ? "ok" : "error";
+    S.tcode = code; render();
+  }
+  function startWatches() {
+    if (watching || !mcp || typeof mcp.watchTool !== "function" || !S.meta || !str(S.meta.notion_user_id)) return;
+    watching = true;
+    if (!S.tasks.size) S.tstate = "loading";
+    for (const w of ["a", "b"]) mcp.watchTool("Notion", "notion-query-data-sources", taskInput(w), ev => onTasks(w, ev), { cache: QUERY_CACHE });
+    render();
+  }
+  async function loadTasksNow() {
+    if (!mcp || !S.meta) return;
+    S.tstate = S.tasks.size ? "ok" : "loading"; S.tcode = null; S.refreshing = true; render();
+    for (const w of ["a", "b"]) {
+      try { onTasks(w, { type: "data", result: await mcp.callTool("Notion", "notion-query-data-sources", taskInput(w), { cache: Object.assign({ refresh: true }, QUERY_CACHE) }) }); }
+      catch (e) { onTasks(w, { type: "error", error: e }); return; }
+    }
+  }
+  function refreshTasks() { loadTasksNow(); }
+
+  function allTasks() { return [...S.tasks.values()]; }
+  function findTask(u) { return S.tasks.get(pageId(u)) || null; }
+  function prioRank(p) { const i = PRIORITIES.indexOf(p); return i < 0 ? 9 : i; }
+  function byPrioThenDue(a, b) { return prioRank(a.priority) - prioRank(b.priority) || str(a.due || "9999").localeCompare(str(b.due || "9999")); }
+  function tasksDueOn(d) { return allTasks().filter(t => t.due === d).sort(byPrioThenDue); }
+  function overdueTasks() { const td = iso(today()); return allTasks().filter(t => t.due && t.due < td).sort(byPrioThenDue); }
+  function bizDays(n) { const out = []; const x = today(); while (out.length < n) { if (!isOff(x)) out.push(iso(x)); x.setDate(x.getDate() + 1); } return out; }
+  function pendingUpdateFor(u) { const id = pageId(u); return S.items.find(i => isUpdate(i) && REVIEW.includes(i.status) && pageId(i.target_url) === id) || null; }
+  function snapFresh() { return !!(S.snap && S.snap.date === iso(today())); }
+  function calendar() { return S.snap && Array.isArray(S.snap.calendar) ? S.snap.calendar.filter(e => e && typeof e === "object") : []; }
+  function eventsOn(d) {
+    return calendar().filter(e => {
+      const st = str(e.start).slice(0, 10), en = str(e.end).slice(0, 10);
+      if (!st) return false;
+      if (e.all_day) return st <= d && (en ? (en > d || en === st) : st === d);
+      return st === d;
+    }).sort((a, b) => str(a.start).localeCompare(str(b.start)));
+  }
+  function meetingsOn(d) { return eventsOn(d).filter(e => !e.all_day); }
+  function fmtTime(s) { const m = str(s).match(/T(\d{2}):(\d{2})/); if (!m) return ""; let hh = +m[1]; const ap = hh >= 12 ? "pm" : "am"; hh = hh % 12 || 12; return hh + (m[2] === "00" ? "" : ":" + m[2]) + ap; }
+  function dayLabel(d) { const x = parseDay(d); return x ? x.toLocaleDateString(undefined, { weekday: "short", day: "numeric" }) : d; }
+  function tasksKnown() { return S.tstate === "ok" || S.tasks.size > 0; }
+
+  function dateChips(cur, onPick, dis, suggested) {
+    const opts = [];
+    if (suggested) opts.push(["Suggested", suggested]);
+    for (const q of quickDates().sort((x, y) => x[1].localeCompare(y[1]))) if (!opts.some(o => o[1] === q[1])) opts.push(q);
+    return h("div", { class: "chips" }, opts.map(([label, d]) => {
+      const n = tasksKnown() ? tasksDueOn(d).length : null, m = meetingsOn(d).length;
+      const tip = label + (n == null ? "" : " · " + n + (n === 1 ? " task" : " tasks") + " due") + (m ? ", " + m + (m === 1 ? " meeting" : " meetings") : "");
+      const b = h("button", { class: "chip", type: "button", "aria-pressed": cur === d ? "true" : "false", disabled: dis, title: tip },
+        label === "Suggested" ? "Suggested · " + fmtDay(d) : fmtDay(d),
+        (n || m) ? h("span", { class: "load", text: [n ? n + " due" : "", m ? m + " mtg" : ""].filter(Boolean).join(" · ") }) : null);
+      b.addEventListener("click", () => onPick(d));
+      return b;
+    }));
+  }
+  function dayContext(d, exclude) {
+    const ex = exclude ? pageId(exclude) : null;
+    const ts = tasksDueOn(d).filter(t => pageId(t.url) !== ex), ms = meetingsOn(d);
+    if (!tasksKnown() && !ms.length) return null;
+    const head = fmtDay(d) + ": " + (tasksKnown() ? (ts.length ? ts.length + (ts.length === 1 ? " other task due" : " other tasks due") : "nothing else due") : "tasks not loaded") + (ms.length ? " · " + ms.length + (ms.length === 1 ? " meeting" : " meetings") : "");
+    const names = ts.slice(0, 3).map(t => t.title).join("; ") + (ts.length > 3 ? "; +" + (ts.length - 3) + " more" : "");
+    const mn = ms.slice(0, 3).map(e => fmtTime(e.start) + " " + str(e.subject)).join("; ") + (ms.length > 3 ? "; +" + (ms.length - 3) + " more" : "");
+    return h("div", { class: "ctx" }, h("div", { text: head }), names ? h("div", { class: "muted", text: names }) : null, mn ? h("div", { class: "muted", text: mn }) : null);
+  }
+
+  function taskRow(t, why, scope) {
+    const k = (scope || "x") + ":" + pageId(t.url);
+    const open = S.open === k;
+    const pend = pendingUpdateFor(t.url);
+    const title = h("button", { class: "trow-title", type: "button", "aria-expanded": open ? "true" : "false", onclick: () => { S.open = open ? null : k; render(); } }, t.title);
+    const meta = h("div", { class: "tmeta" },
+      t.priority ? h("span", { class: "pbadge p" + (prioRank(t.priority) + 1), text: t.priority }) : null,
+      t.company ? h("span", { text: t.company }) : null,
+      t.due ? dueBadge(t.due) : (t.partial ? null : h("span", { text: "no date" })),
+      t.progress && t.progress !== "Not started" ? h("span", { text: t.progress }) : null);
+    const go = pend ? h("button", { class: "linkbtn", type: "button", onclick: () => openCard(pend.id) }, "Date suggestion waiting in Dates") : null;
+    return h("div", { class: "trow" + (open ? " open" : "") }, title, why ? h("p", { class: "reason", text: why }) : null, meta, go, open ? moveEditor(t, pend) : null);
+  }
+  function openCard(id) {
+    S.tab = "dates"; S.flash = id; render();
+    const el = document.getElementById("card-" + id);
+    if (el) el.scrollIntoView({ block: "center" });
+  }
+  function timelineText(t) {
+    if (t.start && t.end && t.end !== t.start) return "Timeline " + fmtDay(t.start) + " to " + fmtDay(t.end);
+    return t.due ? "Due " + fmtDay(t.due) : "No date in Notion";
+  }
+  function setMove(u, patch) { S.moves.set(u, Object.assign({}, S.moves.get(u) || {}, patch)); }
+  function moveEditor(t, pend) {
+    const m = S.moves.get(t.url) || {};
+    const due = m.due || "";
+    const pr = m.priority != null ? m.priority : t.priority;
+    const dis = S.busy || S.saving === t.url || !db;
+    const key = pageId(t.url);
+    const inp = h("input", { type: "date", id: "mv-" + key, value: due, disabled: dis });
+    inp.addEventListener("change", e => { setMove(t.url, { due: e.target.value || "" }); render(); });
+    const fields = h("div", { class: "fields" },
+      h("label", { class: "field" }, "New date", inp),
+      h("label", { class: "field" }, "Priority", selectEl("mp-" + key, ["", ...PRIORITIES], pr || "", v => { setMove(t.url, { priority: v }); render(); }, dis, "None")),
+      pr && t.priority && pr !== t.priority ? h("span", { class: "was", text: "was " + t.priority }) : null);
+    const changed = (due && due !== t.due) || (pr && pr !== t.priority);
+    const save = h("button", { class: "btn primary", type: "button", disabled: dis || !changed || !mcp, text: S.saving === t.url ? "Saving…" : "Save to Notion" });
+    save.addEventListener("click", () => saveMove(t, "move"));
+    const done = h("button", { class: "btn", type: "button", disabled: dis || !mcp, text: "Mark done" });
+    done.addEventListener("click", () => saveMove(t, "done"));
+    return h("div", { class: "editor" },
+      h("div", { class: "muted", text: timelineText(t) + (t.progress ? " · " + t.progress : "") }),
+      fields,
+      dateChips(due, d => { setMove(t.url, { due: d }); render(); }, dis, null),
+      due ? dayContext(due, t.url) : null,
+      h("div", { class: "actions" }, save, done, h("a", { href: t.url, target: "_blank", rel: "noopener", text: "Open in Notion" })),
+      !mcp ? h("p", { class: "muted", text: "Saving needs Notion access on this page. Open it on claude.ai." }) : null,
+      pend ? h("p", { class: "muted", text: "The agent also suggested a date for this one. Saving here closes that suggestion." }) : null);
+  }
+  function moveProps(t, due, pr, action) {
+    if (action === "done") return { "Progress": "Done" };
+    const p = {};
+    if (due && due !== t.due) {
+      if (t.start && t.end && t.start <= due) { p["date:Timeline:start"] = t.start; p["date:Timeline:end"] = due; }
+      else { p["date:Timeline:start"] = due; if (t.end) p["date:Timeline:end"] = null; }
+      p["date:Timeline:is_datetime"] = 0;
+      p["Urgency"] = urgencyFor(due);
+    }
+    if (pr && pr !== t.priority) p["Priority"] = pr;
+    return p;
+  }
+  async function saveMove(t, action) {
+    if (!db || !mcp || S.saving) return;
+    const m = S.moves.get(t.url) || {};
+    const due = action === "move" ? (m.due || t.due || null) : null;
+    const pr = (m.priority != null ? m.priority : t.priority) || null;
+    const props = moveProps(t, due, pr, action);
+    if (!Object.keys(props).length) return;
+    const id = "p" + iso(today()).replace(/-/g, "") + "-" + Date.now().toString(36);
+    const pend = pendingUpdateFor(t.url);
+    const doc = { type: "update", signal: "manual", action, due: action === "move" ? due : null, priority: pr, progress: null,
+      target_url: t.url, target_title: t.title, company: t.company || null,
+      current_due: t.due || null, current_start: t.end ? t.start : null, current_priority: t.priority || null, current_progress: t.progress || null,
+      reason: "You changed this from the Today view.", status: "adding", proposed_at: nowIso(), decided_at: nowIso(), added_by: "page" };
+    S.saving = t.url; S.tmsg = null; render();
+    try { await db.doc("items/" + id).set(doc); }
+    catch (e) { S.saving = null; S.tmsg = { kind: "warn", text: "Couldn't save that change (" + (e && e.code || "error") + "). Nothing changed in Notion." }; render(); return; }
+    try {
+      await mcp.callTool("Notion", "notion-update-page", { page_id: t.url, command: "update_properties", properties: props, allow_async: false });
+      try {
+        await write(id, { status: "added", notion_url: t.url, added_at: nowIso() });
+        if (pend) await write(pend.id, { status: "dismissed", decided_at: nowIso(), error: "Changed from the Today view" });
+      } catch (e) {}
+      if (action === "done") S.tasks.delete(pageId(t.url));
+      else {
+        if ("date:Timeline:start" in props) { t.start = props["date:Timeline:start"]; if ("date:Timeline:end" in props) t.end = props["date:Timeline:end"]; t.due = t.end || t.start; }
+        if (props.Priority) t.priority = props.Priority;
+      }
+      S.moves.delete(t.url); S.open = null;
+      S.tmsg = { kind: "", text: (action === "done" ? "Marked done: " : "Saved: ") + t.title + (action === "move" && props["date:Timeline:start"] !== undefined ? ", due " + fmtDay(t.due) : "") + "." };
+      if (mcp.invalidate) mcp.invalidate("Notion", "notion-query-data-sources").catch(() => {});
+    } catch (e) {
+      const code = e && e.code;
+      try {
+        if (CONNECTOR_CODES.includes(code)) { await write(id, { status: "approved", error: null }); S.tmsg = { kind: "warn", text: connectorCopy(code) + " Your change is saved, and the agent applies it on its next run." }; }
+        else if (code === "tool_error") { await write(id, { status: "approved", error: "Notion refused the change." }); S.tmsg = { kind: "warn", text: "Notion refused that change. The agent retries it on its next run." }; }
+        else { await write(id, { status: "check", error: "Notion didn't confirm the change." }); S.tmsg = { kind: "warn", text: "Notion didn't confirm that change. The agent checks it on its next run." }; }
+      } catch (e2) {}
+    }
+    S.saving = null; render();
+  }
+
+  function tasksStatus() {
+    const at = S.tat ? fmtStamp(new Date(S.tat).toISOString()) : "";
+    const retry = h("button", { class: "linkbtn", type: "button", disabled: !!S.refreshing, onclick: refreshTasks }, S.refreshing ? "Refreshing…" : "Refresh");
+    switch (S.tstate) {
+      case "idle": return h("p", { class: "muted", text: mcp === null && !window.claude ? "Open this page on claude.ai to see your tasks." : "Connecting to Notion…" });
+      case "loading": return h("p", { class: "muted", text: "Loading your tasks from Notion…" });
+      case "ask": return h("div", { class: "banner warn" }, h("div", { text: "This page needs your OK to read your Notion tasks (read only)." }), h("button", { class: "btn", type: "button", style: "margin-top:8px", onclick: loadTasksNow }, "Show my tasks"));
+      case "denied": return h("div", { class: "banner warn", text: connectorCopy(S.tcode) + " The queue still works without it." });
+      case "none": return h("p", { class: "muted", text: "Live tasks show when this page is open on claude.ai." });
+      case "error": return h("div", { class: "banner warn" }, "Couldn't load your tasks (" + S.tcode + "). ", retry);
+      default:
+        return h("p", { class: "muted" },
+          S.tcode ? "Couldn't refresh (" + S.tcode + "). Showing tasks from " + at + ". " : "Notion as of " + at + ". ",
+          "Paused and Reminders are left out. ", retry);
+    }
+  }
+  function section(title, hint, body) {
+    return h("section", { class: "sec" }, h("h2", { text: title }), hint ? h("p", { class: "muted", text: hint }) : null, body);
+  }
+  function focusList() {
+    const wrap = h("div", { class: "tlist" });
+    let src, foot;
+    if (snapFresh() && Array.isArray(S.snap.focus) && S.snap.focus.length) {
+      src = S.snap.focus.slice(0, 5).map(f => {
+        const u = safeUrl(f && f.url); if (!u) return null;
+        return { t: findTask(u) || { url: u, title: str(f.title) || "Task", priority: "", progress: "", company: "", start: null, end: null, due: null, partial: true }, why: str(f.why) };
+      }).filter(Boolean);
+      foot = "Picked by the agent " + fmtStamp(S.snap.generated_at) + " from your email, calendar and Notion.";
+    } else {
+      const td = iso(today());
+      src = allTasks().filter(t => t.due && t.due <= td).sort(byPrioThenDue).slice(0, 5).map(t => ({ t, why: "" }));
+      foot = "Ranked from Notion by priority, then due date. The agent's pick, with email and calendar context, comes with its next scan.";
+    }
+    if (!src.length) wrap.append(h("p", { class: "muted", text: tasksKnown() ? "Nothing due today or overdue. Pick from your week below." : "Shows once your tasks load." }));
+    src.forEach(x => wrap.append(taskRow(x.t, x.why, "focus")));
+    wrap.append(h("p", { class: "foot", text: foot }));
+    return wrap;
+  }
+  function weekPanel() {
+    const days = bizDays(10), td = iso(today());
+    if (!S.day || (S.day !== "overdue" && (S.day < td || !days.includes(S.day)))) S.day = days[0];
+    const od = overdueTasks();
+    const cell = (key, top, n, m, late) => {
+      const b = h("button", { class: "cell" + (late && n ? " late" : ""), type: "button", "aria-pressed": S.day === key ? "true" : "false", "aria-label": top + ": " + (n == null ? "tasks not loaded" : n + " due") + (m ? ", " + m + " meetings" : "") },
+        h("span", { class: "d", text: top }), h("span", { class: "c", text: n == null ? "–" : String(n) }), h("span", { class: "m", text: m ? m + (m === 1 ? " mtg" : " mtgs") : " " }));
+      b.addEventListener("click", () => { S.day = key; render(); });
+      return b;
+    };
+    const known = tasksKnown();
+    const strip = h("div", { class: "strip" }, cell("overdue", "Overdue", known ? od.length : null, 0, true), days.map(d => cell(d, d === td ? "Today" : dayLabel(d), known ? tasksDueOn(d).length : null, meetingsOn(d).length, false)));
+    const detail = h("div", { class: "day" });
+    if (S.day === "overdue") {
+      detail.append(h("p", { class: "lede", text: od.length ? od.length + (od.length === 1 ? " overdue task" : " overdue tasks") + ", highest priority first" : "Nothing overdue." }));
+      od.forEach(t => detail.append(taskRow(t, null, "week")));
+    } else {
+      const evs = eventsOn(S.day), ts = tasksDueOn(S.day);
+      detail.append(h("p", { class: "lede", text: fmtDay(S.day) }));
+      if (evs.length) detail.append(h("div", { class: "mtgs" }, evs.map(e => {
+        const lnk = safeUrl(e.web_link);
+        const subj = lnk ? h("a", { href: lnk, target: "_blank", rel: "noopener", text: str(e.subject) || "Meeting" }) : h("span", { text: str(e.subject) || "Meeting" });
+        return h("div", { class: "mtg" }, h("span", { class: "t", text: e.all_day ? "All day" : fmtTime(e.start) }), h("div", {}, subj, h("div", { class: "w", text: [str(e.who), str(e.location)].filter(Boolean).join(" · ") })));
+      })));
+      else if (S.snap) detail.append(h("p", { class: "muted", text: "No meetings on your calendar." }));
+      if (ts.length) ts.forEach(t => detail.append(taskRow(t, null, "week")));
+      else if (known) detail.append(h("p", { class: "muted", text: "No tasks due." }));
+    }
+    const calNote = S.snap && S.snap.generated_at ? "Calendar as of " + fmtStamp(S.snap.generated_at) + "." : "Your calendar shows here after the agent's next morning scan.";
+    return h("div", { class: "day" }, strip, detail, h("p", { class: "foot", text: calNote }));
+  }
+  function prioList() {
+    const wrap = h("div", { class: "tlist" });
+    const ps = allTasks().filter(t => t.priority === "1 - High" || t.priority === "2 - Mid High").sort(byPrioThenDue);
+    if (!ps.length) { wrap.append(h("p", { class: "muted", text: tasksKnown() ? "No open 1 - High or 2 - Mid High tasks." : "Shows once your tasks load." })); return wrap; }
+    let last = null;
+    for (const t of ps) {
+      if (t.priority !== last) { last = t.priority; const n = ps.filter(x => x.priority === last).length; wrap.append(h("p", { class: "muted", style: "margin-top:6px;font-weight:600", text: last + " · " + n })); }
+      wrap.append(taskRow(t, null, "prio"));
+    }
+    return wrap;
+  }
+  function renderToday(el) {
+    const td = iso(today());
+    const ms = meetingsOn(td), od = overdueTasks().length, dt = tasksDueOn(td).length;
+    const lede = fmtDay(td) + " · " + ms.length + (ms.length === 1 ? " meeting" : " meetings") + (tasksKnown() ? " · " + (od + dt) + " due today or overdue" : "");
+    el.append(h("section", { class: "sec" }, h("p", { class: "lede", text: lede }), snapFresh() && str(S.snap.note) ? h("p", { class: "reason", text: str(S.snap.note) }) : null, tasksStatus(),
+      S.tmsg ? h("div", { class: "banner " + (S.tmsg.kind || ""), text: S.tmsg.text }) : null));
+    el.append(section("Focus today", null, focusList()));
+    el.append(section("Your week", "Tap a day to see what's due and who you're meeting. Tap a task to move its date or change its priority.", weekPanel()));
+    el.append(section("Priorities", "Your open 1 - High and 2 - Mid High tasks, soonest first.", prioList()));
+  }
+  function renderRail() {
+    const wrap = document.getElementById("wrap"), rail = document.getElementById("rail");
+    const on = S.tab === "dates";
+    wrap.classList.toggle("wide", on);
+    document.getElementById("bar").classList.toggle("wide", on);
+    rail.replaceChildren();
+    if (!on) return;
+    rail.append(h("div", { class: "rail-in" }, h("h2", { text: "Your week" }), tasksStatus(), S.tmsg ? h("div", { class: "banner " + (S.tmsg.kind || ""), text: S.tmsg.text }) : null, weekPanel()));
+  }
 
   // ---------- writes ----------
   async function write(id, patch) {
@@ -555,8 +923,8 @@ a { color: var(--accent); text-underline-offset: 2px; }
   render();
   const slowTimer = setTimeout(() => { if (!S.loaded) { S.slow = true; render(); } }, 10000);
   const cl = window.claude;
-  if (!cl || typeof cl.use !== "function") { S.dbError = "Open this page on claude.ai to see your queue."; S.loaded = true; clearTimeout(slowTimer); render(); return; }
-  cl.use("mcp").then(m => { mcp = m; render(); }).catch(() => { mcp = null; });
+  if (!cl || typeof cl.use !== "function") { S.tstate = "none"; S.dbError = "Open this page on claude.ai to see your queue."; S.loaded = true; clearTimeout(slowTimer); render(); return; }
+  cl.use("mcp").then(m => { mcp = m; if (!mcp) S.tstate = "none"; startWatches(); render(); }).catch(() => { mcp = null; S.tstate = "none"; render(); });
   cl.use("db").then(d => {
     db = d;
     if (!db) { S.dbError = "The queue isn't available in this view. Open it on claude.ai while signed in."; S.loaded = true; clearTimeout(slowTimer); render(); return; }
@@ -567,7 +935,8 @@ a { color: var(--accent); text-underline-offset: 2px; }
       else if (snap.size) { S.loaded = true; }
       render();
     }, err => { S.dbError = "The queue stopped updating (" + (err && err.code || "error") + "). Reload the page."; S.loaded = true; clearTimeout(slowTimer); render(); });
-    db.doc("meta/agent").onSnapshot(snap => { S.meta = snap.exists ? snap.data() : null; render(); }, () => {});
+    db.doc("meta/agent").onSnapshot(snap => { S.meta = snap.exists ? snap.data() : null; startWatches(); render(); }, () => {});
+    db.doc("snapshot/today").onSnapshot(snap => { S.snap = snap.exists ? snap.data() : null; render(); }, () => {});
   });
 })();
 </script>
